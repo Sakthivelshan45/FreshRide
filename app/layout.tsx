@@ -1,18 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter, Playfair_Display } from 'next/font/google'
 import './globals.css'
-
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-  display: 'swap',
-})
-
-const playfair = Playfair_Display({
-  subsets: ['latin'],
-  variable: '--font-playfair',
-  display: 'swap',
-})
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -52,10 +39,10 @@ export const metadata: Metadata = {
       'Premium 3-piece disposable travel bedding kit — bedsheet, pillow cover & blanket. Designed for sleeper buses, hotels, trains and overnight travel.',
     images: [
       {
-        url: '/images/lifestyle/hero_sleeper_berth.png',
+        url: '/images/lifestyle/hero_bg.jpg',
         width: 1200,
         height: 630,
-        alt: 'Butterfly Fresh Ride Disposable Travel Bedding Kit on a luxury sleeper bus berth',
+        alt: 'Butterfly Fresh Ride Disposable Travel Bedding Kit',
       },
     ],
   },
@@ -63,7 +50,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Butterfly Fresh Ride | Disposable Travel Bedding Kit',
     description: 'Premium disposable 3-piece travel bedding kit for sleeper buses, hotels and overnight travel.',
-    images: ['/images/lifestyle/hero_sleeper_berth.png'],
+    images: ['/images/lifestyle/hero_bg.jpg'],
   },
   robots: {
     index: true,
@@ -87,7 +74,15 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
+    <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;500;600;700;800;900&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body className="font-sans bg-white text-navy-dark antialiased">
         {children}
       </body>

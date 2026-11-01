@@ -17,8 +17,8 @@ const config: Config = {
         'silver':          '#E8EEF0',
       },
       fontFamily: {
-        sans:  ['var(--font-inter)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        serif: ['var(--font-playfair)', 'ui-serif', 'Georgia', 'serif'],
+        sans:  ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        serif: ['Playfair Display', 'ui-serif', 'Georgia', 'serif'],
       },
       backgroundImage: {
         'gradient-green': 'linear-gradient(135deg, #1A4731 0%, #4A7C59 100%)',
