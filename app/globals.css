@@ -1,0 +1,137 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    font-family: var(--font-inter, ui-sans-serif, system-ui, sans-serif);
+    background-color: #FFFFFF;
+    color: #17232D;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-playfair, ui-serif, Georgia, serif);
+    line-height: 1.2;
+  }
+  a { text-decoration: none; }
+  img { display: block; max-width: 100%; }
+  input, textarea, select {
+    font-family: inherit;
+  }
+}
+
+@layer components {
+  .glass-card {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+  }
+  .gradient-green {
+    background: linear-gradient(135deg, #1A4731 0%, #4A7C59 100%);
+  }
+}
+
+@layer components {
+  /* ── Container ── */
+  .container-wide {
+    width: 100%;
+    max-width: 1280px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  @media (min-width: 640px) {
+    .container-wide { padding-left: 1.5rem; padding-right: 1.5rem; }
+  }
+  @media (min-width: 1024px) {
+    .container-wide { padding-left: 2rem; padding-right: 2rem; }
+  }
+  @media (min-width: 1280px) {
+    .container-wide { padding-left: 2.5rem; padding-right: 2.5rem; }
+  }
+
+  /* ── Section padding ── */
+  .section-padding {
+    padding-top: 4rem;
+    padding-bottom: 4rem;
+  }
+  @media (min-width: 768px) {
+    .section-padding { padding-top: 6rem; padding-bottom: 6rem; }
+  }
+  @media (min-width: 1024px) {
+    .section-padding { padding-top: 8rem; padding-bottom: 8rem; }
+  }
+
+  /* ── Eyebrow text ── */
+  .eyebrow {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #4A7C59;
+  }
+
+  /* ── Buttons ── */
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 2rem;
+    background-color: #1A4731;
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: background-color 0.3s;
+  }
+  .btn-primary:hover { background-color: #4A7C59; }
+
+  .btn-gold {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 2rem;
+    background-color: #C8A96E;
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: background-color 0.3s;
+  }
+  .btn-gold:hover { background-color: #b8964f; }
+
+  .btn-outline {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 2rem;
+    border: 2px solid #1A4731;
+    color: #1A4731;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: all 0.3s;
+  }
+  .btn-outline:hover { background-color: #1A4731; color: #fff; }
+}
+
+@layer utilities {
+  .animate-shimmer {
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2.5s infinite;
+  }
+}
