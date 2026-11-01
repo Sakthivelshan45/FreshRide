@@ -120,18 +120,22 @@ export default function Footer() {
           <ul className="space-y-4 text-sm">
             <li className="flex gap-3 text-green-light">
               <MapPin size={16} className="flex-shrink-0 mt-0.5" />
-              <span>Butterfly Groups, India</span>
+              <span>
+                P2/11, Dakshas Vhridha Apartment,
+                Marudhamalai Rd, IOB Colony,
+                Coimbatore, Tamil Nadu – 641046
+              </span>
             </li>
             <li>
               <a href="tel:+919999999999" className="flex gap-3 text-green-light hover:text-white transition-colors">
                 <Phone size={16} className="flex-shrink-0" />
-                <span>+91 99999 99999</span>
+                <span>+91 62359 58246</span>
               </a>
             </li>
             <li>
               <a href="mailto:info@butterflyfreshride.com" className="flex gap-3 text-green-light hover:text-white transition-colors">
                 <Mail size={16} className="flex-shrink-0" />
-                <span>info@butterflyfreshride.com</span>
+                <span>info@butterflygroups.com</span>
               </a>
             </li>
           </ul>

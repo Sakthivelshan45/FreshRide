@@ -21,9 +21,9 @@ export default function ContactPage() {
             </div>
             <div className="grid md:grid-cols-3 gap-6 mb-12">
               {[
-                { icon: Phone, label: 'Phone', value: '+91 99999 99999', href: 'tel:+919999999999' },
-                { icon: Mail, label: 'Email', value: 'info@butterflyfreshride.com', href: 'mailto:info@butterflyfreshride.com' },
-                { icon: MapPin, label: 'Location', value: 'India', href: '#' },
+                { icon: Phone, label: 'Phone', value: '+91 62359 58246', href: 'tel:+916235958246' },
+                { icon: Mail, label: 'Email', value: 'info@butterflygroups.com', href: 'mailto:info@butterflygroups.com' },
+                { icon: MapPin, label: 'Location', value: 'P2/11, Dakshas Vhridha Apartment, Marudhamalai Rd, IOB Colony, Coimbatore, Tamil Nadu – 641046', href: '#' },
               ].map(({ icon: Icon, label, value, href }) => (
                 <a key={label} href={href} className="bg-white border border-silver p-6 text-center hover:border-green-primary transition-colors group">
                   <div className="w-12 h-12 rounded-full bg-light-bg flex items-center justify-center mx-auto mb-3 group-hover:bg-green-primary transition-colors">

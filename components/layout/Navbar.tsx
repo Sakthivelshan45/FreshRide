@@ -66,7 +66,7 @@ export default function Navbar() {
                   scrolled ? 'text-green-primary' : 'text-white'
                 }`}
               >
-                BUTTERFLY
+                BUTTERFLY'S
               </span>
               <span
                 className={`text-[10px] tracking-[0.2em] uppercase transition-colors duration-300 ${
@@ -104,7 +104,7 @@ export default function Navbar() {
               title="Call us"
             >
               <Phone size={15} />
-              <span className="text-xs">+91 99999 99999</span>
+              <span className="text-xs">+91 62359 58246</span>
             </a>
 
             <Link
