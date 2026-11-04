@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { Fragment } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { formatPrice } from '@/lib/utils/helpers'
 import { ArrowLeft, ShoppingBag, Search } from 'lucide-react'
@@ -83,7 +84,8 @@ export default async function AdminOrdersPage() {
                 </thead>
                 <tbody className="divide-y divide-[#E8EEF0]">
                   {orders.map((order) => (
-                    <tr key={order.id} className="hover:bg-light-bg">
+                    <Fragment key={order.id}>
+                    <tr className="hover:bg-light-bg">
                       <td className="px-4 py-3 font-mono text-xs text-navy-dark">{order.order_number}</td>
                       <td className="px-4 py-3">
                         <p className="text-navy-dark font-medium text-xs">{order.customer_name}</p>
@@ -105,11 +107,50 @@ export default async function AdminOrdersPage() {
                         {new Date(order.created_at).toLocaleDateString('en-IN')}
                       </td>
                       <td className="px-4 py-3">
-                        <Link href={`/admin/orders/${order.id}`} className="text-green-primary hover:underline text-xs">
-                          View
+                        <Link href="/admin/orders" className="text-green-primary hover:underline text-xs">
+                          Manage
                         </Link>
                       </td>
                     </tr>
+                    <tr className="bg-slate-50">
+                      <td colSpan={8} className="px-4 py-4">
+                        <div className="grid md:grid-cols-3 gap-4 text-xs">
+                          <div>
+                            <p className="font-semibold text-navy-dark mb-2">Customer Details</p>
+                            <p>{order.customer_name}</p>
+                            <p>{order.customer_email || 'No email provided'}</p>
+                            <p>{order.customer_phone}</p>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-navy-dark mb-2">Delivery Address</p>
+                            <p>{order.shipping_address?.line1 || '-'}</p>
+                            {order.shipping_address?.line2 && <p>{order.shipping_address.line2}</p>}
+                            <p>
+                              {[order.shipping_address?.city, order.shipping_address?.state, order.shipping_address?.pincode]
+                                .filter(Boolean)
+                                .join(', ') || '-'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-navy-dark mb-2">Order Notes</p>
+                            <p className="whitespace-pre-wrap text-green-secondary">
+                              {order.notes || 'No customer note'}
+                            </p>
+                          </div>
+                          <div className="md:col-span-3 border-t border-silver pt-3">
+                            <p className="font-semibold text-navy-dark mb-2">Items</p>
+                            <div className="flex flex-wrap gap-2">
+                              {(order.order_items || []).map((item: { variant_name?: string; quantity?: number }, index: number) => (
+                                <span key={`${order.id}-${index}`} className="bg-white border border-silver px-2 py-1">
+                                  {item.variant_name || 'Item'} × {item.quantity || 0}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                    </Fragment>
                   ))}
                 </tbody>
               </table>
