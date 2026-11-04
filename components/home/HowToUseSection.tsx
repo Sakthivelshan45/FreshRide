@@ -111,9 +111,9 @@ export default function HowToUseSection() {
                       sizes="(max-width: 1024px) 100vw, 50vw"
                     />
                     {/* Step number overlay */}
-                    <div className="absolute top-4 right-4 font-serif text-6xl font-bold text-white/10">
+                    {/* <div className="absolute top-4 right-4 font-serif text-6xl font-bold text-white/10">
                       {step.step}
-                    </div>
+                    </div> */}
                   </div>
                 </div>
               </motion.div>

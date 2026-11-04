@@ -107,7 +107,7 @@ export default function ProductPackages({ variants, productId, productName, prod
                 >
                   {/* Best value badge */}
                   {isBestValue && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-primary text-white text-[10px] font-semibold tracking-widest uppercase px-4 py-1">
+                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-green-primary text-white text-[10px] font-semibold tracking-widest uppercase px-4 py-1">
                       Best Value
                     </div>
                   )}

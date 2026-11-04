@@ -28,7 +28,7 @@ const highlights = [
 
 export default function TrustStrip() {
   return (
-    <section className="bg-green-primary py-10" aria-label="Key highlights">
+    <section className="bg-green-primary mt-12 py-10" aria-label="Key highlights">
       <div className="container-wide">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {highlights.map((item, i) => (

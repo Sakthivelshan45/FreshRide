@@ -39,7 +39,7 @@ export default function Navbar() {
           <span className="hidden sm:inline">🦋 Free shipping on orders above ₹999 &nbsp;|&nbsp; </span>
           <span className="sm:hidden">🦋 Free shipping above ₹999 | </span>
           <a
-            href="https://wa.me/919999999999?text=Hi%2C%20I%20would%20like%20to%20know%20more%20about%20Butterfly%20Fresh%20Ride"
+            href="https://wa.me/916235958246?text=Hi%2C%20I%20would%20like%20to%20know%20more%20about%20Butterfly%20Fresh%20Ride"
             className="underline hover:text-gold-accent transition-colors"
             target="_blank"
             rel="noopener noreferrer"
