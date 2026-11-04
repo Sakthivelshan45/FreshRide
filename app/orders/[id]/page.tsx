@@ -34,10 +34,12 @@ export default function OrderConfirmationPage({ params }: { params: { id: string
               transition={{ delay: 0.3 }}
             >
               <h1 className="font-serif text-3xl text-navy-dark mb-3">
-                {isPaid ? 'Payment Confirmed!' : 'Order Placed!'}
+                {isCOD ? 'Your Order Has Been Received!' : isPaid ? 'Payment Confirmed!' : 'Order Placed!'}
               </h1>
               <p className="text-green-secondary mb-2">
-                Thank you for your order. Your order ID is:
+                {isCOD
+                  ? 'Thank you. We have received your Cash on Delivery order.'
+                  : 'Thank you for your order. Your order ID is:'}
               </p>
               <p className="font-mono text-sm bg-white border border-silver px-4 py-2 inline-block mb-6 text-navy-dark">
                 {params.id}
@@ -67,7 +69,7 @@ export default function OrderConfirmationPage({ params }: { params: { id: string
                   Continue Shopping
                   <ArrowRight size={15} />
                 </Link>
-                <Link href="/account" className="btn-outline">
+                <Link href="/account/orders" className="btn-outline">
                   View My Orders
                 </Link>
               </div>

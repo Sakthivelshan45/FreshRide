@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
 import { LayoutDashboard, Package, ShoppingBag, Users, MessageSquare, Settings } from 'lucide-react'
+import { createClient } from '@/lib/supabase/server'
 
 export const metadata: Metadata = { title: 'Admin Dashboard | Butterfly Fresh Ride' }
 
@@ -14,7 +15,18 @@ const adminNav = [
   { href: '/admin/content', icon: Settings, label: 'Content', desc: 'FAQs, testimonials & settings' },
 ]
 
-export default function AdminDashboard() {
+export default async function AdminDashboard() {
+  const supabase = await createClient()
+  const [
+    { count: orderCount },
+    { count: enquiryCount },
+    { count: productCount },
+  ] = await Promise.all([
+    supabase.from('orders').select('id', { count: 'exact', head: true }),
+    supabase.from('business_enquiries').select('id', { count: 'exact', head: true }),
+    supabase.from('products').select('id', { count: 'exact', head: true }).eq('is_active', true),
+  ])
+
   return (
     <div className="min-h-screen bg-light-bg">
       {/* Admin header */}
@@ -38,10 +50,10 @@ export default function AdminDashboard() {
         {/* Quick stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
           {[
-            { label: 'Total Orders', value: '—', color: 'border-l-[#1A4731]' },
+            { label: 'Total Orders', value: String(orderCount ?? 0), color: 'border-l-[#1A4731]' },
             { label: 'Total Revenue', value: '—', color: 'border-l-[#C8A96E]' },
-            { label: 'Active Products', value: '1', color: 'border-l-[#4A7C59]' },
-            { label: 'B2B Enquiries', value: '—', color: 'border-l-[#17232D]' },
+            { label: 'Active Products', value: String(productCount ?? 0), color: 'border-l-[#4A7C59]' },
+            { label: 'B2B Enquiries', value: String(enquiryCount ?? 0), color: 'border-l-[#17232D]' },
           ].map((stat) => (
             <div key={stat.label} className={`bg-white border border-silver border-l-4 ${stat.color} p-5`}>
               <p className="text-2xl font-bold text-navy-dark">{stat.value}</p>

@@ -5,6 +5,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { ShoppingCart, Menu, X, User, Phone } from 'lucide-react'
 import { useCartStore } from '@/hooks/useCartStore'
+import { createClient } from '@/lib/supabase/client'
+import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 const navLinks = [
   { href: '/', label: 'Home' },
@@ -17,12 +19,41 @@ const navLinks = [
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const [displayName, setDisplayName] = useState<string | null>(null)
   const itemCount = useCartStore((s) => s.getItemCount())
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 60)
     window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
+    setMounted(true)
+
+    const supabase = createClient()
+    const syncUser = async (user?: SupabaseUser | null) => {
+      if (!user) {
+        setDisplayName(null)
+        return
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single()
+      const typedProfile = profile as { full_name: string | null } | null
+
+      setDisplayName(typedProfile?.full_name || user.user_metadata?.full_name || null)
+    }
+
+    supabase.auth.getUser().then(({ data }) => syncUser(data.user))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      syncUser(session?.user)
+    })
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+      subscription.unsubscribe()
+    }
   }, [])
 
   return (
@@ -115,6 +146,11 @@ export default function Navbar() {
               title="Account"
             >
               <User size={20} />
+              {mounted && displayName && (
+                <span className="ml-2 text-xs font-medium max-w-24 truncate">
+                  Hi, {displayName.split(' ')[0]}
+                </span>
+              )}
             </Link>
 
             <Link
@@ -125,7 +161,7 @@ export default function Navbar() {
               title="Cart"
             >
               <ShoppingCart size={22} />
-              {itemCount > 0 && (
+              {mounted && itemCount > 0 && (
                 <span className="absolute -top-2 -right-2 bg-gold-accent text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
                   {itemCount > 9 ? '9+' : itemCount}
                 </span>
@@ -194,6 +230,7 @@ export default function Navbar() {
                 className="btn-outline w-full justify-center text-center"
               >
                 My Account
+                {mounted && displayName && ` - Hi, ${displayName.split(' ')[0]}`}
               </Link>
             </div>
           </div>

@@ -17,6 +17,13 @@ const FALLBACK_VARIANTS = [
   { id: 'v4', name: 'Bulk Pack (25)', price: 2749, compare_price: 3725, pack_quantity: 25, stock: 40, is_active: true, sort_order: 4, product_id: 'p1' },
 ]
 
+type ShopProduct = {
+  id: string
+  name: string
+  product_variants: Array<(typeof FALLBACK_VARIANTS)[number]>
+  product_images: Array<{ url: string; is_primary: boolean }>
+}
+
 export default async function ShopPage() {
   let variants = FALLBACK_VARIANTS
   let productId = 'fresh-ride-kit'
@@ -33,12 +40,13 @@ export default async function ShopPage() {
       .single()
 
     if (data) {
-      productId = data.id
-      productName = data.name
-      const primaryImg = (data as any).product_images?.find((img: any) => img.is_primary)
+      const shopProduct = data as unknown as ShopProduct
+      productId = shopProduct.id
+      productName = shopProduct.name
+      const primaryImg = shopProduct.product_images?.find((img) => img.is_primary)
       if (primaryImg) productImage = primaryImg.url
-      const liveVariants = (data as any).product_variants?.filter((v: any) => v.is_active)
-      if (liveVariants?.length) variants = liveVariants.sort((a: any, b: any) => a.sort_order - b.sort_order)
+      const liveVariants = shopProduct.product_variants?.filter((variant) => variant.is_active)
+      if (liveVariants?.length) variants = liveVariants.sort((a, b) => a.sort_order - b.sort_order)
     }
   } catch {
     // Use fallback

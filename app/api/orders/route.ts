@@ -57,11 +57,23 @@ export async function POST(request: NextRequest) {
       total_price: item.price * item.quantity,
     }))
 
-    await supabase.from('order_items').insert(orderItems)
+    const { error: itemsError } = await supabase
+      .from('order_items')
+      .insert(orderItems)
+
+    if (itemsError) {
+      await supabase.from('orders').delete().eq('id', order.id)
+      throw itemsError
+    }
 
     if (formData.paymentMethod === 'cod') {
       // Update order status for COD
-      await supabase.from('orders').update({ status: 'confirmed', payment_status: 'pending' }).eq('id', order.id)
+      const { error: codError } = await supabase
+        .from('orders')
+        .update({ status: 'confirmed', payment_status: 'pending' })
+        .eq('id', order.id)
+
+      if (codError) throw codError
       return NextResponse.json({ success: true, orderId: order.id, orderNumber })
     }
 

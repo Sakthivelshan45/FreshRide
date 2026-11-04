@@ -29,7 +29,10 @@ export default function RegisterPage() {
       },
     })
     if (signUpError) {
-      setError(signUpError.message)
+      const message = signUpError.message.toLowerCase().includes('email rate limit')
+        ? 'Too many signup emails were sent recently. Wait a few minutes, then try again or sign in if your account is already created.'
+        : signUpError.message
+      setError(message)
       setLoading(false)
     } else {
       router.push('/account?registered=true')

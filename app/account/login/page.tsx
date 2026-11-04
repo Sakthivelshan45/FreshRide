@@ -21,10 +21,13 @@ export default function LoginPage() {
     const supabase = createClient()
     const { error: authError } = await supabase.auth.signInWithPassword({ email: data.email, password: data.password })
     if (authError) {
-      setError(authError.message)
+      const message = authError.message === 'Invalid login credentials'
+        ? 'Email or password is incorrect. Check your password or use Forgot password.'
+        : authError.message
+      setError(message)
       setLoading(false)
     } else {
-      router.push('/account')
+      router.replace('/')
       router.refresh()
     }
   }

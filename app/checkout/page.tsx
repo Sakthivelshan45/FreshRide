@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { checkoutSchema, type CheckoutFormData } from '@/lib/validations/schemas'
@@ -27,6 +27,7 @@ export default function CheckoutPage() {
   const router = useRouter()
   const [placing, setPlacing] = useState(false)
   const [error, setError] = useState('')
+  const orderSubmitted = useRef(false)
 
   const {
     register,
@@ -39,6 +40,10 @@ export default function CheckoutPage() {
   })
 
   const paymentMethod = watch('paymentMethod')
+
+  useEffect(() => {
+    if (items.length === 0 && !orderSubmitted.current) router.replace('/cart')
+  }, [items.length, router])
 
   const onSubmit = async (formData: CheckoutFormData) => {
     if (items.length === 0) return
@@ -65,8 +70,9 @@ export default function CheckoutPage() {
       if (!orderData.success) throw new Error(orderData.error)
 
       if (formData.paymentMethod === 'cod') {
-        clearCart()
+        orderSubmitted.current = true
         router.push(`/orders/${orderData.orderId}?payment=cod`)
+        clearCart()
         return
       }
 
@@ -92,8 +98,9 @@ export default function CheckoutPage() {
           })
           const verifyData = await verifyRes.json()
           if (verifyData.success) {
-            clearCart()
+            orderSubmitted.current = true
             router.push(`/orders/${orderData.orderId}?payment=paid`)
+            clearCart()
           } else {
             setError('Payment verification failed. Please contact support.')
           }
@@ -122,10 +129,7 @@ export default function CheckoutPage() {
     }
   }
 
-  if (items.length === 0) {
-    router.push('/cart')
-    return null
-  }
+  if (items.length === 0) return null
 
   return (
     <>
