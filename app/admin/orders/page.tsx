@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { Fragment } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { formatPrice } from '@/lib/utils/helpers'
-import { ArrowLeft, ShoppingBag, Search } from 'lucide-react'
+import { ArrowLeft, ShoppingBag } from 'lucide-react'
 
 export const metadata: Metadata = { title: 'Orders | Admin' }
 
