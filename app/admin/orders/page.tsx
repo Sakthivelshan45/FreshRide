@@ -77,7 +77,7 @@ export default async function AdminOrdersPage() {
               <table className="w-full text-sm">
                 <thead className="bg-light-bg">
                   <tr>
-                    {['Order #', 'Customer', 'Items', 'Total', 'Payment', 'Status', 'Date', 'Action'].map(h => (
+                    {['Order #', 'Customer', 'Items', 'Total', 'Payment', 'Status', 'Date'].map(h => (
                       <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-green-secondary uppercase tracking-wide whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -106,14 +106,9 @@ export default async function AdminOrdersPage() {
                       <td className="px-4 py-3 text-green-secondary text-xs whitespace-nowrap">
                         {new Date(order.created_at).toLocaleDateString('en-IN')}
                       </td>
-                      <td className="px-4 py-3">
-                        <Link href="/admin/orders" className="text-green-primary hover:underline text-xs">
-                          Manage
-                        </Link>
-                      </td>
                     </tr>
                     <tr className="bg-slate-50">
-                      <td colSpan={8} className="px-4 py-4">
+                      <td colSpan={7} className="px-4 py-4">
                         <div className="grid md:grid-cols-3 gap-4 text-xs">
                           <div>
                             <p className="font-semibold text-navy-dark mb-2">Customer Details</p>
