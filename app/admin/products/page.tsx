@@ -1,110 +1,133 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { formatPrice } from '@/lib/utils/helpers'
-import { ArrowLeft, Package, Edit, Plus } from 'lucide-react'
+import { Plus, Edit, Package, CheckCircle, XCircle } from 'lucide-react'
+import DeleteProductButton from '@/components/admin/DeleteProductButton'
+import ToggleActiveButton from '@/components/admin/ToggleActiveButton'
 
-export const metadata: Metadata = { title: 'Product Management | Admin' }
+export const metadata: Metadata = { title: 'Products | Admin' }
+export const dynamic = 'force-dynamic'
 
 export default async function AdminProductsPage() {
-  let product: any = null
-  let variants: any[] = []
+  const supabase = await createClient()
 
-  try {
-    const supabase = await createClient()
-    const { data } = await supabase
-      .from('products')
-      .select('*, product_variants(*), product_images(*)')
-      .eq('slug', 'fresh-ride-kit')
-      .single()
+  const { data } = await supabase
+    .from('products')
+    .select('*, product_variants(*), product_images(*)')
+    .order('created_at', { ascending: true })
 
-    if (data) {
-      product = data
-      variants = (data as any).product_variants?.sort((a: any, b: any) => a.sort_order - b.sort_order) || []
-    }
-  } catch {
-    // DB not configured
-  }
+  const products = (data ?? []) as Array<{
+    id: string; name: string; slug: string; short_description: string | null
+    is_active: boolean; created_at: string
+    product_variants: { id: string; name: string; price: number; stock: number; is_active: boolean }[]
+    product_images: { url: string; alt: string | null; is_primary: boolean }[]
+  }>
 
   return (
-    <div className="min-h-screen bg-light-bg">
-      <header className="bg-navy-dark text-white px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Package size={20} className="text-gold-accent" />
-          <span className="font-medium">Product Management</span>
+    <div className="p-8">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="font-serif text-3xl text-navy-dark mb-1">Products</h1>
+          <p className="text-green-secondary text-sm">{products.length} products total</p>
         </div>
-        <Link href="/admin" className="text-xs text-green-light hover:text-white flex items-center gap-1">
-          <ArrowLeft size={12} /> Dashboard
+        <Link href="/admin/products/new" className="btn-primary">
+          <Plus size={16} /> Add Product
         </Link>
-      </header>
+      </div>
 
-      <div className="max-w-5xl mx-auto p-8">
-        {!product ? (
-          <div className="bg-amber-50 border border-amber-200 text-amber-800 p-6 text-sm">
-            <strong>Database not configured.</strong> Connect your Supabase instance to manage products live.
-            Until then, the site uses the built-in seed data.
-          </div>
-        ) : (
-          <>
-            {/* Product info */}
-            <div className="bg-white border border-silver p-6 mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-serif text-xl text-navy-dark">{product.name}</h2>
-                <span className={`text-xs px-2 py-1 ${product.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                  {product.is_active ? 'Active' : 'Inactive'}
-                </span>
-              </div>
-              <p className="text-sm text-green-secondary">{product.description}</p>
-            </div>
+      {products.length === 0 ? (
+        <div className="bg-white border border-silver p-16 text-center">
+          <Package size={48} className="text-silver mx-auto mb-4" />
+          <p className="text-navy-dark font-medium mb-2">No products yet</p>
+          <Link href="/admin/products/new" className="btn-primary inline-flex">
+            <Plus size={16} /> Add First Product
+          </Link>
+        </div>
+      ) : (
+        <div className="bg-white border border-silver">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-light-bg border-b border-silver">
+                <tr>
+                  {['Image', 'Product', 'Price', 'Stock', 'Status', 'Actions'].map(h => (
+                    <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-green-secondary uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E8EEF0]">
+                {products.map((product) => {
+                  const primaryImage = product.product_images?.find(i => i.is_primary) ?? product.product_images?.[0]
+                  const variant = product.product_variants?.[0]
+                  const price = variant?.price ?? 0
+                  const stock = variant?.stock ?? 0
 
-            {/* Variants table */}
-            <div className="bg-white border border-silver">
-              <div className="flex items-center justify-between p-5 border-b border-silver">
-                <h3 className="font-medium text-navy-dark">Product Variants & Pricing</h3>
-                <Link href="/admin/products/new-variant" className="btn-primary text-xs py-2 px-4">
-                  <Plus size={13} /> Add Variant
-                </Link>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-light-bg">
-                    <tr>
-                      {['Name', 'Pack Qty', 'Price', 'MRP', 'Stock', 'Status', 'Action'].map(h => (
-                        <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-green-secondary uppercase tracking-wide">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#E8EEF0]">
-                    {variants.length === 0 ? (
-                      <tr><td colSpan={7} className="px-4 py-8 text-center text-green-secondary">No variants configured yet.</td></tr>
-                    ) : variants.map((v) => (
-                      <tr key={v.id} className="hover:bg-light-bg">
-                        <td className="px-4 py-3 font-medium text-navy-dark">{v.name}</td>
-                        <td className="px-4 py-3 text-green-secondary">{v.pack_quantity}</td>
-                        <td className="px-4 py-3 font-bold text-navy-dark">{formatPrice(v.price)}</td>
-                        <td className="px-4 py-3 text-green-secondary line-through">{v.compare_price ? formatPrice(v.compare_price) : '—'}</td>
-                        <td className="px-4 py-3">
-                          <span className={v.stock > 10 ? 'text-green-600' : v.stock > 0 ? 'text-amber-600' : 'text-red-500'}>{v.stock}</span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`text-xs px-2 py-1 ${v.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                            {v.is_active ? 'Active' : 'Hidden'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <Link href={`/admin/products/${v.id}`} className="text-green-primary hover:underline flex items-center gap-1 text-xs">
+                  return (
+                    <tr key={product.id} className="hover:bg-light-bg">
+                      {/* Image */}
+                      <td className="px-4 py-3">
+                        <div className="relative w-12 h-12 bg-light-bg flex-shrink-0">
+                          {primaryImage ? (
+                            <Image src={primaryImage.url} alt={primaryImage.alt ?? product.name} fill className="object-cover" />
+                          ) : (
+                            <div className="w-12 h-12 bg-light-bg flex items-center justify-center">
+                              <Package size={16} className="text-silver" />
+                            </div>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Name */}
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-navy-dark">{product.name}</p>
+                        <p className="text-[11px] text-green-secondary font-mono">{product.slug}</p>
+                      </td>
+
+                      {/* Price */}
+                      <td className="px-4 py-3">
+                        {price === 0
+                          ? <span className="text-xs text-gold-accent font-medium">Coming Soon</span>
+                          : <span className="font-bold text-navy-dark">{formatPrice(price)}</span>}
+                      </td>
+
+                      {/* Stock */}
+                      <td className="px-4 py-3">
+                        <span className={`text-xs font-medium ${stock > 10 ? 'text-green-600' : stock > 0 ? 'text-amber-600' : 'text-red-500'}`}>
+                          {stock === 0 ? 'Out of stock' : `${stock} units`}
+                        </span>
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5">
+                          {product.is_active
+                            ? <><CheckCircle size={14} className="text-green-500" /><span className="text-xs text-green-600">Active</span></>
+                            : <><XCircle size={14} className="text-gray-400" /><span className="text-xs text-gray-500">Hidden</span></>}
+                        </div>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/admin/products/${product.id}`}
+                            className="inline-flex items-center gap-1 text-xs text-green-primary hover:underline"
+                          >
                             <Edit size={12} /> Edit
                           </Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
+                          <ToggleActiveButton productId={product.id} isActive={product.is_active} />
+                          <DeleteProductButton productId={product.id} productName={product.name} />
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
