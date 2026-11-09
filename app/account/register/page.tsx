@@ -5,14 +5,16 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { registerSchema, type RegisterFormData } from '@/lib/validations/schemas'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import { MailCheck } from 'lucide-react'
 
 export default function RegisterPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
+  const [confirmation, setConfirmation] = useState<{ name: string; email: string } | null>(null)
+  const [resending, setResending] = useState(false)
+  const [resendMessage, setResendMessage] = useState('')
   const { register, handleSubmit, formState: { errors } } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
   })
@@ -26,6 +28,7 @@ export default function RegisterPage() {
       password: data.password,
       options: {
         data: { full_name: data.fullName, phone: data.phone },
+        emailRedirectTo: `${window.location.origin}/auth/confirm`,
       },
     })
     if (signUpError) {
@@ -35,8 +38,25 @@ export default function RegisterPage() {
       setError(message)
       setLoading(false)
     } else {
-      router.push('/account?registered=true')
+      setConfirmation({ name: data.fullName.trim(), email: data.email.trim() })
+      setLoading(false)
     }
+  }
+
+  async function resendConfirmation() {
+    if (!confirmation) return
+
+    setResending(true)
+    setResendMessage('')
+    const supabase = createClient()
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: confirmation.email,
+      options: { emailRedirectTo: `${window.location.origin}/auth/confirm` },
+    })
+
+    setResending(false)
+    setResendMessage(error ? error.message : 'A new confirmation email has been sent.')
   }
 
   return (
@@ -50,6 +70,37 @@ export default function RegisterPage() {
           <p className="text-green-light text-sm mt-1">Join Butterfly Fresh Ride</p>
         </div>
         <div className="p-8">
+          {confirmation ? (
+            <div className="text-center">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-light">
+                <MailCheck className="text-green-primary" size={28} />
+              </div>
+              <h2 className="font-serif text-2xl text-navy-dark">Check your inbox, {confirmation.name}</h2>
+              <p className="mt-3 text-sm leading-6 text-green-secondary">
+                We sent a confirmation email to
+              </p>
+              <p className="mt-1 break-all font-medium text-navy-dark">{confirmation.email}</p>
+              <p className="mt-3 text-sm leading-6 text-green-secondary">
+                Open the email and click <strong>Confirm your email</strong> to activate your account.
+              </p>
+              {resendMessage && (
+                <p role="status" className="mt-4 rounded bg-light-bg px-3 py-2 text-sm text-green-secondary">
+                  {resendMessage}
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={resendConfirmation}
+                disabled={resending}
+                className="btn-primary mt-6 w-full justify-center disabled:opacity-60"
+              >
+                {resending ? 'Sending...' : 'Resend confirmation email'}
+              </button>
+              <Link href="/account/login" className="mt-4 block text-sm font-medium text-green-primary hover:underline">
+                Back to Sign In
+              </Link>
+            </div>
+          ) : (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-navy-dark mb-1.5 uppercase tracking-wide">Full Name *</label>
@@ -81,9 +132,12 @@ export default function RegisterPage() {
               {loading ? 'Creating Account...' : 'Create Account'}
             </button>
           </form>
+          )}
+          {!confirmation && (
           <div className="mt-6 text-center text-sm text-green-secondary">
             Already have an account? <Link href="/account/login" className="text-green-primary font-medium hover:underline">Sign In</Link>
           </div>
+          )}
         </div>
       </div>
     </div>

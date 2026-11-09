@@ -46,7 +46,7 @@ export default function Footer() {
           </p>
           <div className="flex gap-4">
             <a
-              href="https://wa.me/919999999999"
+              href="https://wa.me/916235958246"
               target="_blank"
               rel="noopener noreferrer"
               className="text-green-light hover:text-[#25D366] transition-colors"
@@ -81,6 +81,7 @@ export default function Footer() {
           <ul className="space-y-3 text-sm">
             {[
               { href: '/product/fresh-ride-kit', label: 'Fresh Ride Kit (3-Piece)' },
+              { href: '/products', label: 'All Products' },
               { href: '/shop', label: 'Shop All Packs' },
               { href: '/product/fresh-ride-kit#specifications', label: 'Product Specifications' },
               { href: '/business', label: 'Bulk & Wholesale Orders' },
@@ -127,13 +128,19 @@ export default function Footer() {
               </span>
             </li>
             <li>
-              <a href="tel:+919999999999" className="flex gap-3 text-green-light hover:text-white transition-colors">
+              <a href="tel:+916235958246" className="flex gap-3 text-green-light hover:text-white transition-colors">
                 <Phone size={16} className="flex-shrink-0" />
                 <span>+91 62359 58246</span>
               </a>
             </li>
             <li>
-              <a href="mailto:info@butterflyfreshride.com" className="flex gap-3 text-green-light hover:text-white transition-colors">
+              <a href="tel:+919952753900" className="flex gap-3 text-green-light hover:text-white transition-colors">
+                <Phone size={16} className="flex-shrink-0" />
+                <span>+91 99527 53900</span>
+              </a>
+            </li>
+            <li>
+              <a href="mailto:info@butterflygroups.com" className="flex gap-3 text-green-light hover:text-white transition-colors">
                 <Mail size={16} className="flex-shrink-0" />
                 <span>info@butterflygroups.com</span>
               </a>

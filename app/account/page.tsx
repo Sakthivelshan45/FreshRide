@@ -7,7 +7,11 @@ import SignOutButton from '@/components/account/SignOutButton'
 
 export const metadata: Metadata = { title: 'My Account | Butterfly Fresh Ride' }
 
-export default async function AccountPage() {
+export default async function AccountPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ confirmed?: string }>
+}) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -21,6 +25,7 @@ export default async function AccountPage() {
     .eq('id', user.id)
     .single()
   const typedProfile = profile as { full_name: string | null; is_admin: boolean } | null
+  const { confirmed } = await searchParams
 
   return (
     <div className="min-h-screen bg-light-bg pt-20">
@@ -32,6 +37,11 @@ export default async function AccountPage() {
             Back to site
           </Link>
         </div>
+        {confirmed === 'true' && (
+          <div role="status" className="mb-6 border border-green-primary bg-green-light px-4 py-3 text-sm text-green-primary">
+            Your email has been confirmed successfully. Welcome to Butterfly Fresh Ride!
+          </div>
+        )}
         <p className="text-sm text-green-secondary mb-6">
           Signed in as {typedProfile?.full_name || user.user_metadata.full_name || user.email}
         </p>

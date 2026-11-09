@@ -10,8 +10,9 @@ import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 const navLinks = [
   { href: '/', label: 'Home' },
+  { href: '/products', label: 'Products' },
   { href: '/shop', label: 'Shop' },
-  { href: '/product/fresh-ride-kit', label: 'Product' },
+  { href: '/product/fresh-ride-kit', label: 'Fresh Ride Kit' },
   { href: '/business', label: 'Business' },
   { href: '/contact', label: 'Contact' },
 ]
@@ -128,7 +129,7 @@ export default function Navbar() {
           {/* Right actions */}
           <div className="flex items-center gap-4">
             <a
-              href="tel:+919999999999"
+              href="tel:+916235958246"
               className={`hidden lg:flex items-center gap-1.5 text-sm transition-colors duration-300 ${
                 scrolled ? 'text-navy-dark' : 'text-white/90'
               } hover:text-green-secondary`}

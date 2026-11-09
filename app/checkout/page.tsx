@@ -10,17 +10,7 @@ import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { ShieldCheck, CreditCard, Truck } from 'lucide-react'
-import Script from 'next/script'
-
-declare global {
-  interface Window {
-    Razorpay: new (options: Record<string, unknown>) => {
-      open: () => void
-      on: (event: string, handler: (resp: Record<string, string>) => void) => void
-    }
-  }
-}
+import { ShieldCheck, Truck } from 'lucide-react'
 
 export default function CheckoutPage() {
   const { items, getSubtotal, getDiscount, getShipping, getTotal, couponCode, clearCart } = useCartStore()
@@ -32,14 +22,11 @@ export default function CheckoutPage() {
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors },
   } = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
-    defaultValues: { paymentMethod: 'razorpay' },
+    defaultValues: { paymentMethod: 'cod' },
   })
-
-  const paymentMethod = watch('paymentMethod')
 
   useEffect(() => {
     if (items.length === 0 && !orderSubmitted.current) router.replace('/cart')
@@ -51,7 +38,7 @@ export default function CheckoutPage() {
     setError('')
 
     try {
-      // Create order on server
+      // Create order on server (COD only)
       const orderRes = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -69,59 +56,9 @@ export default function CheckoutPage() {
       const orderData = await orderRes.json()
       if (!orderData.success) throw new Error(orderData.error)
 
-      if (formData.paymentMethod === 'cod') {
-        orderSubmitted.current = true
-        router.push(`/orders/${orderData.orderId}?payment=cod`)
-        clearCart()
-        return
-      }
-
-      // Razorpay flow
-      const rpOptions = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        amount: orderData.razorpayOrder.amount,
-        currency: 'INR',
-        name: 'Butterfly Fresh Ride',
-        description: 'Disposable Travel Bedding Kit',
-        order_id: orderData.razorpayOrder.id,
-        handler: async (response: Record<string, string>) => {
-          // Server-side verification
-          const verifyRes = await fetch('/api/payment/verify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              orderId: orderData.orderId,
-              razorpayOrderId: response.razorpay_order_id,
-              razorpayPaymentId: response.razorpay_payment_id,
-              razorpaySignature: response.razorpay_signature,
-            }),
-          })
-          const verifyData = await verifyRes.json()
-          if (verifyData.success) {
-            orderSubmitted.current = true
-            router.push(`/orders/${orderData.orderId}?payment=paid`)
-            clearCart()
-          } else {
-            setError('Payment verification failed. Please contact support.')
-          }
-        },
-        prefill: {
-          name: formData.fullName,
-          email: formData.email,
-          contact: formData.phone,
-        },
-        theme: { color: '#1A4731' },
-        modal: {
-          ondismiss: () => setPlacing(false),
-        },
-      }
-
-      const rzp = new window.Razorpay(rpOptions)
-      rzp.on('payment.failed', () => {
-        setError('Payment failed. Please try again.')
-        setPlacing(false)
-      })
-      rzp.open()
+      orderSubmitted.current = true
+      router.push(`/orders/${orderData.orderId}?payment=cod`)
+      clearCart()
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.'
       setError(message)
@@ -133,7 +70,6 @@ export default function CheckoutPage() {
 
   return (
     <>
-      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="beforeInteractive" />
       <Navbar />
       <main className="pt-24 min-h-screen bg-light-bg">
         <div className="container-wide section-padding">
@@ -141,7 +77,7 @@ export default function CheckoutPage() {
 
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="grid lg:grid-cols-3 gap-8">
-              {/* Left: Shipping + Payment */}
+              {/* Left: Shipping Details */}
               <div className="lg:col-span-2 space-y-6">
                 {/* Shipping details */}
                 <div className="bg-white border border-silver p-6">
@@ -208,28 +144,19 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
-                {/* Payment method */}
+                {/* Payment method - COD only */}
                 <div className="bg-white border border-silver p-6">
                   <h2 className="font-serif text-xl text-navy-dark mb-5 flex items-center gap-2">
-                    <CreditCard size={20} className="text-green-primary" />
+                    <Truck size={20} className="text-green-primary" />
                     Payment Method
                   </h2>
-                  <div className="space-y-3">
-                    <label className={`flex items-center gap-4 p-4 border-2 cursor-pointer transition-colors ${paymentMethod === 'razorpay' ? 'border-green-primary bg-light-bg' : 'border-silver'}`}>
-                      <input type="radio" {...register('paymentMethod')} value="razorpay" className="accent-[#1A4731]" />
-                      <div>
-                        <p className="font-medium text-sm text-navy-dark">Pay Online</p>
-                        <p className="text-xs text-green-secondary">Cards, UPI, Net Banking via Razorpay — Secure &amp; Encrypted</p>
-                      </div>
-                    </label>
-                    <label className={`flex items-center gap-4 p-4 border-2 cursor-pointer transition-colors ${paymentMethod === 'cod' ? 'border-green-primary bg-light-bg' : 'border-silver'}`}>
-                      <input type="radio" {...register('paymentMethod')} value="cod" className="accent-[#1A4731]" />
-                      <div>
-                        <p className="font-medium text-sm text-navy-dark">Cash on Delivery</p>
-                        <p className="text-xs text-green-secondary">Pay when your order arrives</p>
-                      </div>
-                    </label>
-                  </div>
+                  <label className="flex items-center gap-4 p-4 border-2 border-green-primary bg-light-bg cursor-default">
+                    <input type="radio" {...register('paymentMethod')} value="cod" defaultChecked className="accent-[#1A4731]" readOnly />
+                    <div>
+                      <p className="font-medium text-sm text-navy-dark">Cash on Delivery</p>
+                      <p className="text-xs text-green-secondary">Pay when your order arrives — No advance payment needed</p>
+                    </div>
+                  </label>
                 </div>
 
                 {error && (
@@ -282,7 +209,7 @@ export default function CheckoutPage() {
                     className="btn-primary w-full justify-center mt-6 disabled:opacity-60"
                   >
                     <ShieldCheck size={16} />
-                    {placing ? 'Processing...' : paymentMethod === 'cod' ? 'Place Order (COD)' : 'Pay Now'}
+                    {placing ? 'Processing...' : 'Place Order (COD)'}
                   </button>
 
                   <div className="mt-4 flex items-center gap-2 text-xs text-green-light justify-center">
