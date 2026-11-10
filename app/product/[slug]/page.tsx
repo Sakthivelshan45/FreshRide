@@ -3,13 +3,39 @@ import Footer from '@/components/layout/Footer'
 import ProductDetailClient from './ProductDetailClient'
 import { createClient } from '@/lib/supabase/server'
 
-const FALLBACK_PRODUCT = {
+type ProductVariant = {
+  id: string
+  name: string
+  price: number
+  compare_price: number | null
+  pack_quantity: number
+  stock: number
+  is_active: boolean
+  sort_order: number
+}
+
+type ProductImage = {
+  url: string
+  alt: string | null
+  is_primary: boolean
+}
+
+type Product = {
+  id: string
+  name: string
+  slug: string
+  description: string | null
+  short_description: string | null
+  variants: ProductVariant[]
+  images: ProductImage[]
+}
+
+const FALLBACK_PRODUCT: Product = {
   id: 'fresh-ride-kit',
   name: 'Butterfly Fresh Ride Disposable Travel Bedding Kit',
   slug: 'fresh-ride-kit',
   description: 'The Butterfly Fresh Ride disposable travel bedding kit is your complete all-in-one bedding solution for overnight journeys. Designed for convenience and hygiene, each kit includes a soft bedsheet, pillow cover and blanket — everything you need for a fresh, comfortable night of rest wherever you travel.',
   short_description: 'Complete 3-piece disposable travel bedding kit — bedsheet, pillow cover & blanket.',
-  is_active: true,
   variants: [
     { id: 'v1', name: 'Single Kit', price: 149, compare_price: null, pack_quantity: 1, stock: 100, is_active: true, sort_order: 1 },
     { id: 'v2', name: 'Pack of 5', price: 649, compare_price: 745, pack_quantity: 5, stock: 80, is_active: true, sort_order: 2 },
@@ -23,7 +49,7 @@ const FALLBACK_PRODUCT = {
   ],
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+export async function generateMetadata() {
   return {
     title: 'Butterfly Fresh Ride Disposable Travel Bedding Kit | 3-Piece Set',
     description: 'Buy Butterfly Fresh Ride disposable travel bedding kit online. Includes bedsheet, pillow cover and blanket. Ideal for sleeper buses, hotels and overnight travel.',
@@ -44,10 +70,26 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       .single()
 
     if (data) {
+      const productData = data as unknown as {
+        id: string
+        name: string
+        slug: string
+        description: string | null
+        short_description: string | null
+        product_variants: ProductVariant[] | null
+        product_images: ProductImage[] | null
+      }
+
       product = {
-        ...data,
-        variants: (data as any).product_variants?.filter((v: any) => v.is_active).sort((a: any, b: any) => a.sort_order - b.sort_order) || [],
-        images: (data as any).product_images || [],
+        id: productData.id,
+        name: productData.name,
+        slug: productData.slug,
+        description: productData.description,
+        short_description: productData.short_description,
+        variants: (productData.product_variants ?? [])
+          .filter((variant) => variant.is_active)
+          .sort((a, b) => a.sort_order - b.sort_order),
+        images: productData.product_images ?? [],
       }
     }
   } catch {
