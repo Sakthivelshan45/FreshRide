@@ -42,32 +42,32 @@ export default async function AdminDashboard() {
   }
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="font-serif text-3xl text-navy-dark mb-1">Dashboard</h1>
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="font-serif text-2xl sm:text-3xl text-navy-dark mb-1">Dashboard</h1>
         <p className="text-green-secondary text-sm">Welcome back! Here&apos;s what&apos;s happening in your store.</p>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
         {[
           { label: 'Total Revenue', value: formatPrice(totalRevenue), icon: TrendingUp, color: 'text-green-primary', bg: 'bg-green-50', note: 'From paid orders' },
           { label: 'Total Orders', value: String(safeOrders.length), icon: ShoppingBag, color: 'text-blue-600', bg: 'bg-blue-50', note: `${pendingOrders} pending` },
           { label: 'Active Products', value: String(activeProducts), icon: Package, color: 'text-purple-600', bg: 'bg-purple-50', note: `${comingSoonProducts} coming soon` },
           { label: 'New Enquiries', value: String(enquiryCount ?? 0), icon: MessageSquare, color: 'text-gold-accent', bg: 'bg-amber-50', note: 'Needs follow-up' },
         ].map((stat) => (
-          <div key={stat.label} className="bg-white border border-silver p-5 rounded-sm">
-            <div className={`w-10 h-10 ${stat.bg} rounded flex items-center justify-center mb-3`}>
-              <stat.icon size={20} className={stat.color} />
+          <div key={stat.label} className="bg-white border border-silver p-3 sm:p-5 rounded-sm">
+            <div className={`w-8 h-8 sm:w-10 sm:h-10 ${stat.bg} rounded flex items-center justify-center mb-2 sm:mb-3`}>
+              <stat.icon size={18} className={stat.color} />
             </div>
-            <p className="text-2xl font-bold text-navy-dark">{stat.value}</p>
+            <p className="text-xl sm:text-2xl font-bold text-navy-dark">{stat.value}</p>
             <p className="text-xs font-medium text-navy-dark mt-1">{stat.label}</p>
             <p className="text-[11px] text-green-secondary mt-0.5">{stat.note}</p>
           </div>
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Recent Orders */}
         <div className="bg-white border border-silver">
           <div className="flex items-center justify-between p-5 border-b border-silver">

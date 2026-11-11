@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { usePathname } from 'next/navigation'
 import { ShoppingCart, Menu, X, User, Phone } from 'lucide-react'
 import { useCartStore } from '@/hooks/useCartStore'
 import { createClient } from '@/lib/supabase/client'
@@ -18,6 +19,7 @@ const navLinks = [
 ]
 
 export default function Navbar() {
+  const pathname = usePathname()
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -26,6 +28,7 @@ export default function Navbar() {
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 60)
+    handleScroll()
     window.addEventListener('scroll', handleScroll, { passive: true })
     setMounted(true)
 
@@ -57,11 +60,40 @@ export default function Navbar() {
     }
   }, [])
 
+  useEffect(() => {
+    const desktopQuery = window.matchMedia('(min-width: 1024px)')
+    const closeOnDesktop = (event: MediaQueryListEvent) => {
+      if (event.matches) setMobileOpen(false)
+    }
+    desktopQuery.addEventListener('change', closeOnDesktop)
+    return () => desktopQuery.removeEventListener('change', closeOnDesktop)
+  }, [])
+
+  useEffect(() => {
+    if (!mobileOpen) return
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileOpen(false)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [mobileOpen])
+
+  const solidHeader = scrolled || pathname !== '/'
+  const isActiveLink = (href: string) =>
+    href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`)
+
   return (
     <>
       <header
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-          scrolled
+          solidHeader
             ? 'bg-white/95 backdrop-blur-md shadow-sm border-b border-silver'
             : 'bg-transparent'
         }`}
@@ -95,14 +127,14 @@ export default function Navbar() {
             <div className="flex flex-col leading-tight">
               <span
                 className={`text-sm font-bold tracking-wide transition-colors duration-300 ${
-                  scrolled ? 'text-green-primary' : 'text-white'
+                  solidHeader ? 'text-green-primary' : 'text-white'
                 }`}
               >
                 BUTTERFLY'S
               </span>
               <span
                 className={`text-[10px] tracking-[0.2em] uppercase transition-colors duration-300 ${
-                  scrolled ? 'text-green-secondary' : 'text-green-light'
+                  solidHeader ? 'text-green-secondary' : 'text-green-light'
                 }`}
               >
                 Fresh Ride
@@ -116,8 +148,11 @@ export default function Navbar() {
               <li key={link.href}>
                 <Link
                   href={link.href}
-                  className={`text-sm font-medium tracking-wide transition-colors duration-300 hover:text-green-secondary ${
-                    scrolled ? 'text-navy-dark' : 'text-white/90'
+                  aria-current={isActiveLink(link.href) ? 'page' : undefined}
+                  className={`border-b-2 py-2 text-sm font-medium tracking-wide transition-colors duration-300 hover:text-green-secondary ${
+                    isActiveLink(link.href)
+                      ? 'border-green-primary text-green-primary'
+                      : `border-transparent ${solidHeader ? 'text-navy-dark' : 'text-white/90'}`
                   }`}
                 >
                   {link.label}
@@ -131,7 +166,7 @@ export default function Navbar() {
             <a
               href="tel:+916235958246"
               className={`hidden lg:flex items-center gap-1.5 text-sm transition-colors duration-300 ${
-                scrolled ? 'text-navy-dark' : 'text-white/90'
+                solidHeader ? 'text-navy-dark' : 'text-white/90'
               } hover:text-green-secondary`}
               title="Call us"
             >
@@ -142,7 +177,7 @@ export default function Navbar() {
             <Link
               href="/account"
               className={`hidden lg:flex items-center transition-colors duration-300 ${
-                scrolled ? 'text-navy-dark' : 'text-white/90'
+                solidHeader ? 'text-navy-dark' : 'text-white/90'
               } hover:text-green-secondary`}
               title="Account"
             >
@@ -156,14 +191,14 @@ export default function Navbar() {
 
             <Link
               href="/cart"
-              className={`relative flex items-center transition-colors duration-300 ${
-                scrolled ? 'text-navy-dark' : 'text-white/90'
+              className={`group relative flex items-center transition-colors duration-300 ${
+                solidHeader ? 'text-navy-dark' : 'text-white/90'
               } hover:text-green-secondary`}
               title="Cart"
             >
               <ShoppingCart size={22} />
               {mounted && itemCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-gold-accent text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                <span className="absolute -top-2 -right-2 bg-gold-accent text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center opacity-0 scale-75 pointer-events-none transition-all duration-200 ease-out group-hover:opacity-100 group-hover:scale-100">
                   {itemCount > 9 ? '9+' : itemCount}
                 </span>
               )}
@@ -176,6 +211,8 @@ export default function Navbar() {
               }`}
               onClick={() => setMobileOpen(!mobileOpen)}
               aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={mobileOpen}
+              aria-controls="mobile-navigation"
             >
               {mobileOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
@@ -185,12 +222,12 @@ export default function Navbar() {
 
       {/* Mobile Menu Drawer */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden">
+        <div className="fixed inset-0 z-[60] lg:hidden">
           <div
             className="absolute inset-0 bg-black/50"
             onClick={() => setMobileOpen(false)}
           />
-          <div className="absolute right-0 top-0 bottom-0 w-72 bg-white flex flex-col shadow-2xl">
+          <div id="mobile-navigation" className="absolute right-0 top-0 bottom-0 w-72 bg-white flex flex-col shadow-2xl">
             <div className="p-6 border-b border-silver flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <div className="relative w-8 h-8">
@@ -198,7 +235,7 @@ export default function Navbar() {
                 </div>
                 <span className="font-bold text-green-primary">BUTTERFLY</span>
               </div>
-              <button onClick={() => setMobileOpen(false)}>
+              <button onClick={() => setMobileOpen(false)} aria-label="Close menu">
                 <X size={20} className="text-navy-dark" />
               </button>
             </div>
@@ -209,7 +246,12 @@ export default function Navbar() {
                   key={link.href}
                   href={link.href}
                   onClick={() => setMobileOpen(false)}
-                  className="block py-3 px-4 text-navy-dark font-medium text-sm hover:bg-light-bg hover:text-green-primary rounded-sm transition-colors"
+                  aria-current={isActiveLink(link.href) ? 'page' : undefined}
+                  className={`block border-l-2 py-3 px-4 font-medium text-sm transition-colors ${
+                    isActiveLink(link.href)
+                      ? 'border-green-primary bg-light-bg text-green-primary'
+                      : 'border-transparent text-navy-dark hover:bg-light-bg hover:text-green-primary'
+                  }`}
                 >
                   {link.label}
                 </Link>

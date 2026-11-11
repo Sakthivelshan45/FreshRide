@@ -17,6 +17,16 @@ const statusColors: Record<string, string> = {
   refunded: 'bg-gray-100 text-gray-700',
 }
 
+const statusLabels: Record<string, string> = {
+  pending: 'Awaiting Confirmation',
+  confirmed: 'Confirmed',
+  processing: 'Processing',
+  shipped: 'Shipped',
+  delivered: 'Delivered',
+  cancelled: 'Cancelled',
+  refunded: 'Refunded',
+}
+
 export default async function AdminOrdersPage() {
   let orders: any[] = []
 
@@ -100,7 +110,7 @@ export default async function AdminOrdersPage() {
                       </td>
                       <td className="px-4 py-3">
                         <span className={`text-[10px] px-2 py-0.5 ${statusColors[order.status] || 'bg-gray-100 text-gray-700'}`}>
-                          {order.status}
+                          {statusLabels[order.status] || order.status}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-green-secondary text-xs whitespace-nowrap">

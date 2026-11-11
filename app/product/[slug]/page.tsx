@@ -62,7 +62,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   try {
     const supabase = await createClient()
-    const { data } = await supabase
+    const { data }: { data: any } = await supabase
       .from('products')
       .select(`*, product_variants(*), product_images(*)`)
       .eq('slug', slug)

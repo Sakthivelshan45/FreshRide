@@ -57,7 +57,7 @@ export default async function HomePage() {
   try {
     const supabase = await createClient()
 
-    const { data: productData } = await supabase
+    const { data: productData }: { data: any } = await supabase
       .from('products')
       .select(`
         id, name,

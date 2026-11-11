@@ -67,13 +67,9 @@ export async function POST(request: NextRequest) {
     }
 
     if (formData.paymentMethod === 'cod') {
-      // Update order status for COD
-      const { error: codError } = await supabase
-        .from('orders')
-        .update({ status: 'confirmed', payment_status: 'pending' })
-        .eq('id', order.id)
-
-      if (codError) throw codError
+      // Keep COD orders in a pending state until admin confirmation/fulfillment.
+      // This avoids falsely showing a COD order as already confirmed when it still
+      // needs acceptance and dispatch processing.
       return NextResponse.json({ success: true, orderId: order.id, orderNumber })
     }
 

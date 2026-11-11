@@ -35,6 +35,16 @@ export default async function MyOrdersPage() {
     refunded: 'bg-gray-100 text-gray-700',
   }
 
+  const statusLabels: Record<string, string> = {
+    pending: 'Awaiting Confirmation',
+    confirmed: 'Confirmed',
+    processing: 'Processing',
+    shipped: 'Shipped',
+    delivered: 'Delivered',
+    cancelled: 'Cancelled',
+    refunded: 'Refunded',
+  }
+
   return (
     <div className="min-h-screen bg-light-bg pt-20">
       <div className="container-wide section-padding max-w-4xl">
@@ -72,7 +82,7 @@ export default async function MyOrdersPage() {
                   </div>
                   <div>
                     <span className={`text-xs font-semibold px-3 py-1.5 rounded-full ${statusColors[order.status] || 'bg-gray-100 text-gray-700'}`}>
-                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                      {statusLabels[order.status] || order.status}
                     </span>
                   </div>
                 </div>
