@@ -1,13 +1,16 @@
+import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
+import type { CartProduct } from '@/hooks/useCartStore'
 import { createClient } from '@/lib/supabase/server'
 import { generateOrderNumber } from '@/lib/utils/helpers'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { formData, items, subtotal, discount, shipping, total, couponCode } = body
+    const { formData, items, subtotal, discount, shipping, total } = body
 
     const supabase = await createClient()
+    const orderId = randomUUID()
     const orderNumber = generateOrderNumber()
 
     const shippingAddress = {
@@ -24,9 +27,10 @@ export async function POST(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
 
     // Create the order
-    const { data: order, error: orderError } = await supabase
+    const { error: orderError } = await supabase
       .from('orders')
       .insert({
+        id: orderId,
         order_number: orderNumber,
         user_id: user?.id || null,
         customer_name: formData.fullName,
@@ -42,14 +46,12 @@ export async function POST(request: NextRequest) {
         total,
         notes: formData.notes || null,
       })
-      .select()
-      .single()
 
     if (orderError) throw orderError
 
     // Insert order items
-    const orderItems = items.map((item: any) => ({
-      order_id: order.id,
+    const orderItems = items.map((item: CartProduct) => ({
+      order_id: orderId,
       variant_id: item.variantId,
       variant_name: item.variantName,
       quantity: item.quantity,
@@ -62,7 +64,7 @@ export async function POST(request: NextRequest) {
       .insert(orderItems)
 
     if (itemsError) {
-      await supabase.from('orders').delete().eq('id', order.id)
+      await supabase.from('orders').delete().eq('id', orderId)
       throw itemsError
     }
 
@@ -70,7 +72,7 @@ export async function POST(request: NextRequest) {
       // Keep COD orders in a pending state until admin confirmation/fulfillment.
       // This avoids falsely showing a COD order as already confirmed when it still
       // needs acceptance and dispatch processing.
-      return NextResponse.json({ success: true, orderId: order.id, orderNumber })
+      return NextResponse.json({ success: true, orderId, orderNumber })
     }
 
     // Create Razorpay order
@@ -88,7 +90,7 @@ export async function POST(request: NextRequest) {
 
     // Store razorpay order id
     await supabase.from('payments').insert({
-      order_id: order.id,
+      order_id: orderId,
       razorpay_order_id: razorpayOrder.id,
       amount: total,
       status: 'pending',
@@ -96,7 +98,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      orderId: order.id,
+      orderId,
       orderNumber,
       razorpayOrder,
     })
