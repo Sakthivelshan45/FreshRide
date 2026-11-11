@@ -5,10 +5,18 @@ import { createClient } from '@/lib/supabase/server'
 import { generateOrderNumber } from '@/lib/utils/helpers'
 
 export async function POST(request: NextRequest) {
+  const reference = randomUUID()
+  let stage = 'request'
+
   try {
     const body = await request.json()
     const { formData, items, subtotal, discount, shipping, total } = body
 
+    if (!Array.isArray(items) || items.length === 0) {
+      return NextResponse.json({ success: false, error: 'Your cart is empty. Add items before placing an order.' }, { status: 400 })
+    }
+
+    stage = 'database_connection'
     const supabase = await createClient()
     const orderId = randomUUID()
     const orderNumber = generateOrderNumber()
@@ -27,6 +35,7 @@ export async function POST(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
 
     // Create the order
+    stage = 'save_order'
     const { error: orderError } = await supabase
       .from('orders')
       .insert({
@@ -50,18 +59,40 @@ export async function POST(request: NextRequest) {
     if (orderError) throw orderError
 
     // Insert order items
+    stage = 'validate_items'
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    const variantIds = [...new Set(
+      (items as CartProduct[])
+        .map((item) => item.variantId)
+        .filter((id): id is string => typeof id === 'string' && uuidPattern.test(id))
+    )]
+    const { data: variants, error: variantsError } = variantIds.length
+      ? await supabase.from('product_variants').select('id').in('id', variantIds)
+      : { data: [], error: null }
+    if (variantsError) throw variantsError
+    const existingVariantIds = new Set((variants ?? []).map((variant) => variant.id))
+
+    stage = 'save_items'
     const orderItems = items.map((item: CartProduct) => ({
       order_id: orderId,
-      variant_id: item.variantId,
+      // Cart data is persisted in the browser and can outlive a deleted variant.
+      // Keep the order's item snapshot even if its optional variant reference is stale.
+      variant_id: existingVariantIds.has(item.variantId) ? item.variantId : null,
       variant_name: item.variantName,
       quantity: item.quantity,
       unit_price: item.price,
       total_price: item.price * item.quantity,
     }))
 
-    const { error: itemsError } = await supabase
+    let { error: itemsError } = await supabase
       .from('order_items')
       .insert(orderItems)
+
+    if (itemsError?.code === '23503') {
+      const snapshotItems = orderItems.map((item) => ({ ...item, variant_id: null }))
+      const retry = await supabase.from('order_items').insert(snapshotItems)
+      itemsError = retry.error
+    }
 
     if (itemsError) {
       await supabase.from('orders').delete().eq('id', orderId)
@@ -76,6 +107,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create Razorpay order
+    stage = 'create_payment'
     const Razorpay = (await import('razorpay')).default
     const razorpay = new Razorpay({
       key_id: process.env.RAZORPAY_KEY_ID!,
@@ -89,12 +121,14 @@ export async function POST(request: NextRequest) {
     })
 
     // Store razorpay order id
-    await supabase.from('payments').insert({
+    stage = 'save_payment'
+    const { error: paymentError } = await supabase.from('payments').insert({
       order_id: orderId,
       razorpay_order_id: razorpayOrder.id,
       amount: total,
       status: 'pending',
     })
+    if (paymentError) throw paymentError
 
     return NextResponse.json({
       success: true,
@@ -103,8 +137,23 @@ export async function POST(request: NextRequest) {
       razorpayOrder,
     })
   } catch (error) {
-    console.error('Order creation error:', error)
-    return NextResponse.json({ success: false, error: 'Failed to create order. Please try again.' }, { status: 500 })
+    console.error(`Order creation failed at ${stage} (reference ${reference}):`, error)
+    const errorMessages: Record<string, string> = {
+      request: 'The order request could not be read.',
+      database_connection: 'Could not connect to the order service.',
+      save_order: 'Could not save your order.',
+      validate_items: 'Could not validate the products in your cart.',
+      save_items: 'Could not save the items in your order. Please refresh your cart and try again.',
+      create_payment: 'Could not start online payment.',
+      save_payment: 'Could not save the payment details.',
+    }
+
+    return NextResponse.json({
+      success: false,
+      error: `${errorMessages[stage] || 'Could not complete your order.'} Reference: ${reference}`,
+      stage,
+      reference,
+    }, { status: 500 })
   }
 }
 

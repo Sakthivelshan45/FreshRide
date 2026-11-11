@@ -132,7 +132,7 @@ export interface Database {
         Row: {
           id: string
           order_id: string
-          variant_id: string
+          variant_id: string | null
           variant_name: string
           quantity: number
           unit_price: number
