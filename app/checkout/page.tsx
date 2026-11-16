@@ -1,16 +1,17 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { checkoutSchema, type CheckoutFormData } from '@/lib/validations/schemas'
 import { useCartStore } from '@/hooks/useCartStore'
 import { formatPrice, INDIAN_STATES } from '@/lib/utils/helpers'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
+import PayButton from '@/components/checkout/PayButton'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { ShieldCheck, Truck } from 'lucide-react'
+import { ShieldCheck, Truck, CreditCard } from 'lucide-react'
 
 export default function CheckoutPage() {
   const { items, getSubtotal, getDiscount, getShipping, getTotal, couponCode, clearCart } = useCartStore()
@@ -18,27 +19,34 @@ export default function CheckoutPage() {
   const [placing, setPlacing] = useState(false)
   const [error, setError] = useState('')
   const orderSubmitted = useRef(false)
+  const markOrderSubmitted = useCallback(() => {
+    orderSubmitted.current = true
+  }, [])
 
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    control,
+    formState: { errors, isValid },
   } = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
-    defaultValues: { paymentMethod: 'cod' },
+    mode: 'onTouched',
+    defaultValues: { paymentMethod: 'razorpay' },
   })
+
+  const formValues = useWatch({ control })
+  const paymentMethod = formValues?.paymentMethod
 
   useEffect(() => {
     if (items.length === 0 && !orderSubmitted.current) router.replace('/cart')
   }, [items.length, router])
 
-  const onSubmit = async (formData: CheckoutFormData) => {
+  const onSubmitCOD = async (formData: CheckoutFormData) => {
     if (items.length === 0) return
     setPlacing(true)
     setError('')
 
     try {
-      // Create order on server (COD only)
       const orderRes = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -49,7 +57,7 @@ export default function CheckoutPage() {
           discount: getDiscount(),
           shipping: getShipping(),
           total: getTotal(),
-          couponCode,
+          couponCode: couponCode || undefined,
         }),
       })
 
@@ -57,13 +65,41 @@ export default function CheckoutPage() {
       if (!orderData.success) throw new Error(orderData.error)
 
       orderSubmitted.current = true
-      router.push(`/orders/${orderData.orderId}?payment=cod`)
+      const confirmationParams = new URLSearchParams({
+        payment: 'cod',
+        orderNumber: orderData.orderNumber,
+      })
+      for (const item of items.slice(0, 5)) {
+        confirmationParams.append(
+          'item',
+          `${item.name} — ${item.variantName} × ${item.quantity}`
+        )
+      }
+      if (items.length > 5) confirmationParams.set('moreItems', String(items.length - 5))
+      router.push(`/orders/${orderData.orderId}?${confirmationParams.toString()}`)
       clearCart()
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.'
       setError(message)
       setPlacing(false)
     }
+  }
+
+  const onFormSubmit = (event: FormEvent<HTMLFormElement>) => {
+    void handleSubmit(onSubmitCOD)(event)
+  }
+
+  // Get the current form values for PayButton (Razorpay)
+  const customerDetails = {
+    fullName: formValues?.fullName || '',
+    email: formValues?.email || '',
+    phone: formValues?.phone || '',
+    addressLine1: formValues?.addressLine1 || '',
+    addressLine2: formValues?.addressLine2 || '',
+    city: formValues?.city || '',
+    state: formValues?.state || '',
+    pincode: formValues?.pincode || '',
+    notes: formValues?.notes || '',
   }
 
   if (items.length === 0) return null
@@ -75,7 +111,7 @@ export default function CheckoutPage() {
         <div className="container-wide section-padding">
           <h1 className="font-serif text-4xl text-navy-dark mb-10">Checkout</h1>
 
-          <form onSubmit={handleSubmit(onSubmit)}>
+          <form onSubmit={onFormSubmit}>
             <div className="grid lg:grid-cols-3 gap-8">
               {/* Left: Shipping Details */}
               <div className="lg:col-span-2 space-y-6">
@@ -144,19 +180,28 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
-                {/* Payment method - COD only */}
+                {/* Payment method selection */}
                 <div className="bg-white border border-silver p-6">
                   <h2 className="font-serif text-xl text-navy-dark mb-5 flex items-center gap-2">
-                    <Truck size={20} className="text-green-primary" />
+                    <CreditCard size={20} className="text-green-primary" />
                     Payment Method
                   </h2>
-                  <label className="flex items-center gap-4 p-4 border-2 border-green-primary bg-light-bg cursor-default">
-                    <input type="radio" {...register('paymentMethod')} value="cod" defaultChecked className="accent-[#1A4731]" readOnly />
-                    <div>
-                      <p className="font-medium text-sm text-navy-dark">Cash on Delivery</p>
-                      <p className="text-xs text-green-secondary">Pay when your order arrives — No advance payment needed</p>
-                    </div>
-                  </label>
+                  <div className="space-y-3">
+                    <label className={`flex items-center gap-4 p-4 border-2 cursor-pointer transition-colors ${paymentMethod === 'razorpay' ? 'border-green-primary bg-light-bg' : 'border-silver hover:border-green-light'}`}>
+                      <input type="radio" {...register('paymentMethod')} value="razorpay" className="accent-[#1A4731]" />
+                      <div>
+                        <p className="font-medium text-sm text-navy-dark">Pay Online (Razorpay)</p>
+                        <p className="text-xs text-green-secondary">UPI, Debit/Credit Cards, Net Banking, Wallets</p>
+                      </div>
+                    </label>
+                    <label className={`flex items-center gap-4 p-4 border-2 cursor-pointer transition-colors ${paymentMethod === 'cod' ? 'border-green-primary bg-light-bg' : 'border-silver hover:border-green-light'}`}>
+                      <input type="radio" {...register('paymentMethod')} value="cod" className="accent-[#1A4731]" />
+                      <div>
+                        <p className="font-medium text-sm text-navy-dark">Cash on Delivery</p>
+                        <p className="text-xs text-green-secondary">Pay when your order arrives — No advance payment needed</p>
+                      </div>
+                    </label>
+                  </div>
                 </div>
 
                 {error && (
@@ -202,19 +247,31 @@ export default function CheckoutPage() {
                     </div>
                   </div>
 
-                  <button
-                    type="submit"
-                    id="checkout-place-order"
-                    disabled={placing}
-                    className="btn-primary w-full justify-center mt-6 disabled:opacity-60"
-                  >
-                    <ShieldCheck size={16} />
-                    {placing ? 'Processing...' : 'Place Order (COD)'}
-                  </button>
-
-                  <div className="mt-4 flex items-center gap-2 text-xs text-green-light justify-center">
-                    <ShieldCheck size={12} />
-                    <span>Secured by 256-bit SSL encryption</span>
+                  {/* Payment buttons */}
+                  <div className="mt-6">
+                    {paymentMethod === 'razorpay' ? (
+                      <PayButton
+                        customer={customerDetails}
+                        disabled={!isValid}
+                        onOrderVerified={markOrderSubmitted}
+                      />
+                    ) : (
+                      <>
+                        <button
+                          type="submit"
+                          id="checkout-place-order"
+                          disabled={placing}
+                          className="btn-primary w-full justify-center disabled:opacity-60"
+                        >
+                          <ShieldCheck size={16} />
+                          {placing ? 'Processing...' : 'Place Order (COD)'}
+                        </button>
+                        <div className="mt-4 flex items-center gap-2 text-xs text-green-light justify-center">
+                          <ShieldCheck size={12} />
+                          <span>Secured by 256-bit SSL encryption</span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

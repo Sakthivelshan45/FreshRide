@@ -1,0 +1,9 @@
+import { createHmac, timingSafeEqual } from 'crypto'
+
+export function verifyRazorpaySignature(payload: string, signature: string, secret: string) {
+  if (!/^[a-f\d]{64}$/i.test(signature)) return false
+
+  const expected = createHmac('sha256', secret).update(payload).digest()
+  const received = Buffer.from(signature, 'hex')
+  return received.length === expected.length && timingSafeEqual(expected, received)
+}

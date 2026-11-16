@@ -19,7 +19,7 @@ cp .env.example .env.local
 # Edit .env.local with your Supabase & Razorpay keys
 
 # 3. Set up the database
-# Paste supabase/migrations/001_initial.sql into your Supabase SQL Editor
+# Run supabase/migrations/001_initial.sql through 005_harden_razorpay_orders.sql in order
 
 # 4. Run dev server
 npm run dev
@@ -39,6 +39,9 @@ Edit `.env.local`:
 | `NEXT_PUBLIC_RAZORPAY_KEY_ID` | Razorpay Dashboard → Settings → API Keys |
 | `RAZORPAY_KEY_ID` | Same as above (server-side) |
 | `RAZORPAY_KEY_SECRET` | Razorpay Dashboard → Settings → API Keys |
+| `RAZORPAY_WEBHOOK_SECRET` | Razorpay Dashboard → Settings → Webhooks |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Dashboard → Settings → API (server-side only) |
+| `NEXT_PUBLIC_SITE_URL` | Site origin (for example `http://localhost:3000` locally) |
 
 ---
 
@@ -69,6 +72,8 @@ Edit `.env.local`:
 | `/product/fresh-ride-kit` | Product detail with gallery & variant selector |
 | `/cart` | Cart with coupon support |
 | `/checkout` | Checkout with Razorpay & COD |
+| `/order-success` | Successful payment confirmation |
+| `/order-failed` | Failed or dismissed payment |
 | `/orders/[id]` | Order confirmation |
 | `/account` | Account dashboard |
 | `/account/login` | Login |
@@ -89,7 +94,17 @@ Edit `.env.local`:
 
 ## Database Setup
 
-Run `supabase/migrations/001_initial.sql` in your Supabase SQL Editor.
+For a new database, run migrations `001_initial.sql` through
+`005_harden_razorpay_orders.sql` in order in the Supabase SQL Editor. For an
+existing database that has already applied migration 004, apply migration 005.
+The Razorpay order routes use the service-role key for writes; browser clients
+can read only their own orders and order items.
+
+### Razorpay Webhook
+
+Configure the webhook URL as `https://<your-domain>/api/razorpay/webhook` and
+subscribe to `payment.captured` and `payment.failed`. Set the webhook's secret
+as `RAZORPAY_WEBHOOK_SECRET` in `.env.local` and Vercel.
 
 ### Make a User Admin
 

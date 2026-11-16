@@ -1,14 +1,10 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  typescript: {
-    // Type checking is handled separately (tsc --noEmit)
-    // This allows Vercel to build without blocking on type errors
-    ignoreBuildErrors: true,
+  turbopack: {
+    root: process.cwd(),
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  outputFileTracingRoot: process.cwd(),
   images: {
     remotePatterns: [
       {

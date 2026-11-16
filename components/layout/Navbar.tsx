@@ -24,7 +24,10 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [displayName, setDisplayName] = useState<string | null>(null)
-  const itemCount = useCartStore((s) => s.getItemCount())
+  // Derive item count only after mount to avoid hydration mismatch
+  // (Zustand persist reads from localStorage which doesn't exist on the server)
+  const rawItemCount = useCartStore((s) => s.getItemCount())
+  const itemCount = mounted ? rawItemCount : 0
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 60)
@@ -198,7 +201,7 @@ export default function Navbar() {
             >
               <ShoppingCart size={22} />
               {mounted && itemCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-gold-accent text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center opacity-0 scale-75 pointer-events-none transition-all duration-200 ease-out group-hover:opacity-100 group-hover:scale-100">
+                <span className="absolute -top-2 -right-2 bg-gold-accent text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
                   {itemCount > 9 ? '9+' : itemCount}
                 </span>
               )}

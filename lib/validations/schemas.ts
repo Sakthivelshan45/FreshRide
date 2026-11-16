@@ -1,19 +1,80 @@
 import { z } from 'zod'
 
 export const checkoutSchema = z.object({
-  fullName: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Please enter a valid email address'),
+  fullName: z.string().trim().min(2, 'Name must be at least 2 characters').max(100),
+  email: z.string().trim().email('Please enter a valid email address').max(254),
   phone: z.string().regex(/^[6-9]\d{9}$/, 'Please enter a valid 10-digit mobile number'),
-  addressLine1: z.string().min(5, 'Please enter your full address'),
-  addressLine2: z.string().optional(),
-  city: z.string().min(2, 'Please enter your city'),
-  state: z.string().min(2, 'Please select your state'),
-  pincode: z.string().regex(/^\d{6}$/, 'Please enter a valid 6-digit PIN code'),
-  notes: z.string().optional(),
+  addressLine1: z.string().trim().min(5, 'Please enter your full address').max(200),
+  addressLine2: z.string().trim().max(200).optional(),
+  city: z.string().trim().min(2, 'Please enter your city').max(100),
+  state: z.string().trim().min(2, 'Please select your state').max(100),
+  pincode: z.string().regex(/^[1-9]\d{5}$/, 'Please enter a valid 6-digit PIN code'),
+  notes: z.string().trim().max(500).optional(),
   paymentMethod: z.enum(['razorpay', 'cod']),
 })
 
 export type CheckoutFormData = z.infer<typeof checkoutSchema>
+
+export const razorpayCreateOrderSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        variant_id: z.string().uuid(),
+        quantity: z.number().int().min(1).max(100),
+      })
+    )
+    .min(1)
+    .max(100)
+    .superRefine((items, context) => {
+      const variantIds = new Set<string>()
+      for (const [index, item] of items.entries()) {
+        if (variantIds.has(item.variant_id)) {
+          context.addIssue({
+            code: 'custom',
+            message: 'A product variant may only appear once.',
+            path: [index, 'variant_id'],
+          })
+        }
+        variantIds.add(item.variant_id)
+      }
+    }),
+  customer: checkoutSchema.omit({ paymentMethod: true }),
+  couponCode: z.string().trim().min(1).max(50).optional(),
+})
+
+export const cashOnDeliveryOrderSchema = z.object({
+  formData: checkoutSchema.extend({ paymentMethod: z.literal('cod') }),
+  items: z
+    .array(
+      z.object({
+        variantId: z.string().uuid(),
+        quantity: z.number().int().min(1).max(100),
+      })
+    )
+    .min(1)
+    .max(100)
+    .superRefine((items, context) => {
+      const variantIds = new Set<string>()
+      for (const [index, item] of items.entries()) {
+        if (variantIds.has(item.variantId)) {
+          context.addIssue({
+            code: 'custom',
+            message: 'A product variant may only appear once.',
+            path: [index, 'variantId'],
+          })
+        }
+        variantIds.add(item.variantId)
+      }
+    }),
+  couponCode: z.string().trim().min(1).max(50).optional(),
+})
+
+export const razorpayVerifySchema = z.object({
+  orderId: z.string().uuid(),
+  razorpayOrderId: z.string().min(1).max(100),
+  razorpayPaymentId: z.string().min(1).max(100),
+  razorpaySignature: z.string().regex(/^[a-f\d]{64}$/i),
+})
 
 export const businessEnquirySchema = z.object({
   companyName: z.string().min(2, 'Company name is required'),

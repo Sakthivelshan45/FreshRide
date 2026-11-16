@@ -6,12 +6,17 @@ import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import { CheckCircle, Package, ArrowRight } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { use } from 'react'
 
-export default function OrderConfirmationPage({ params }: { params: { id: string } }) {
+export default function OrderConfirmationPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
   const searchParams = useSearchParams()
   const payment = searchParams.get('payment')
   const isPaid = payment === 'paid'
   const isCOD = payment === 'cod'
+  const orderNumber = searchParams.get('orderNumber')
+  const orderedItems = searchParams.getAll('item')
+  const extraItemCount = Number.parseInt(searchParams.get('moreItems') ?? '0', 10)
 
   return (
     <>
@@ -41,8 +46,22 @@ export default function OrderConfirmationPage({ params }: { params: { id: string
                   ? 'Thank you. We have received your Cash on Delivery order.'
                   : 'Thank you for your order. Your order ID is:'}
               </p>
+              {isCOD && orderedItems.length > 0 && (
+                <div className="bg-white border border-silver p-4 mb-4 text-left">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-green-secondary mb-2">
+                    Ordered products
+                  </p>
+                  <ul className="space-y-1 text-sm text-navy-dark">
+                    {orderedItems.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}
+                    {extraItemCount > 0 && <li>And {extraItemCount} more item(s)</li>}
+                  </ul>
+                </div>
+              )}
+              {isCOD && orderNumber && (
+                <p className="text-xs text-green-secondary mb-2">Order number</p>
+              )}
               <p className="font-mono text-sm bg-white border border-silver px-4 py-2 inline-block mb-6 text-navy-dark">
-                {params.id}
+                {isCOD ? orderNumber || id : id}
               </p>
 
               {isCOD && (

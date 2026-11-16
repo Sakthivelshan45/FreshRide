@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { formatPrice } from '@/lib/utils/helpers'
-import { Package, ShoppingBag, Users, MessageSquare, TrendingUp, Clock, CheckCircle, AlertCircle } from 'lucide-react'
+import { Package, ShoppingBag, MessageSquare, TrendingUp, CheckCircle, AlertCircle } from 'lucide-react'
 
 export const metadata: Metadata = { title: 'Admin Dashboard | Butterfly Fresh Ride' }
 export const dynamic = 'force-dynamic'
@@ -13,20 +13,18 @@ export default async function AdminDashboard() {
   const [
     { data: orders },
     { data: products },
-    { count: customerCount },
     { count: enquiryCount },
   ] = await Promise.all([
-    supabase.from('orders').select('id, total, status, payment_status, created_at, customer_name, order_number').order('created_at', { ascending: false }).limit(5),
+    supabase.from('orders').select('id, total, status, fulfillment_status, created_at, customer_name, order_number').order('created_at', { ascending: false }).limit(5),
     supabase.from('products').select('id, name, slug, is_active, product_variants(price, is_active)'),
-    supabase.from('profiles').select('id', { count: 'exact', head: true }),
     supabase.from('business_enquiries').select('id', { count: 'exact', head: true }).eq('status', 'new'),
   ])
 
-  const safeOrders = (orders ?? []) as Array<{ id: string; total: number; status: string; payment_status: string; created_at: string; customer_name: string; order_number: string }>
+  const safeOrders = (orders ?? []) as Array<{ id: string; total: number; status: string; fulfillment_status: string; created_at: string; customer_name: string; order_number: string }>
   const safeProducts = (products ?? []) as Array<{ id: string; name: string; slug: string; is_active: boolean; product_variants: { price: number; is_active: boolean }[] }>
 
-  const totalRevenue = safeOrders.filter(o => o.payment_status === 'paid').reduce((s, o) => s + (o.total ?? 0), 0)
-  const pendingOrders = safeOrders.filter(o => o.status === 'pending').length
+  const totalRevenue = safeOrders.filter(o => o.status === 'paid').reduce((s, o) => s + (o.total ?? 0), 0)
+  const pendingOrders = safeOrders.filter(o => o.fulfillment_status === 'pending').length
   const activeProducts = safeProducts.filter(p => p.is_active).length
   const comingSoonProducts = safeProducts.filter(p => {
     const v = p.product_variants?.[0]
@@ -85,8 +83,8 @@ export default async function AdminDashboard() {
                     <p className="text-[10px] text-green-secondary font-mono">{order.order_number}</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className={`text-[10px] px-2 py-0.5 ${statusColors[order.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                      {order.status}
+                    <span className={`text-[10px] px-2 py-0.5 ${statusColors[order.fulfillment_status] ?? 'bg-gray-100 text-gray-600'}`}>
+                      {order.fulfillment_status}
                     </span>
                     <span className="text-xs font-bold text-navy-dark">{formatPrice(order.total)}</span>
                   </div>

@@ -49,7 +49,15 @@ export default async function HomePage() {
   // Try to fetch live data from Supabase; fall back to static seed data gracefully
   let variants = FALLBACK_VARIANTS
   let faqs = FALLBACK_FAQS
-  let testimonials = FALLBACK_TESTIMONIALS
+  let testimonials: {
+    id: string
+    name: string
+    role: string | null
+    content: string
+    rating: number
+    is_active: boolean
+    is_demo: boolean
+  }[] = FALLBACK_TESTIMONIALS
   let productId = 'fresh-ride-kit'
   let productName = 'Butterfly Fresh Ride Disposable Travel Bedding Kit'
   let productImage = '/images/products/three_piece_kit.png'
@@ -102,15 +110,19 @@ export default async function HomePage() {
         <HeroSection />
         <TrustStrip />
         <ProductIntroSection />
-        <WhyChooseSection />
-        <UseCasesSection />
-        <HowToUseSection />
+
         <ProductPackages
           variants={variants}
           productId={productId}
           productName={productName}
           productImage={productImage}
         />
+
+
+        <WhyChooseSection />
+        <UseCasesSection />
+        <HowToUseSection />
+
         <B2BSection />
         <TestimonialCarousel testimonials={testimonials} />
         <FAQSection faqs={faqs} />

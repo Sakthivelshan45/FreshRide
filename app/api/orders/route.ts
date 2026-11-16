@@ -1,177 +1,249 @@
 import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
-import type { CartProduct } from '@/hooks/useCartStore'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { generateOrderNumber } from '@/lib/utils/helpers'
+import { cashOnDeliveryOrderSchema } from '@/lib/validations/schemas'
+
+const FREE_SHIPPING_THRESHOLD = 999
+const SHIPPING_COST = 99
 
 export async function POST(request: NextRequest) {
   const reference = randomUUID()
   let stage = 'request'
 
   try {
-    const body = await request.json()
-    const { formData, items, subtotal, discount, shipping, total } = body
-
-    if (!Array.isArray(items) || items.length === 0) {
-      return NextResponse.json({ success: false, error: 'Your cart is empty. Add items before placing an order.' }, { status: 400 })
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json(
+        { success: false, error: 'Request body must be valid JSON.' },
+        { status: 400 }
+      )
     }
 
-    stage = 'database_connection'
+    const parsed = cashOnDeliveryOrderSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid order details.' },
+        { status: 400 }
+      )
+    }
+
+    const { formData, items, couponCode } = parsed.data
+    const supabaseAdmin = createAdminClient()
+    const cleanupOrder = async (orderId: string) => {
+      const { error } = await supabaseAdmin.from('orders').delete().eq('id', orderId)
+      if (error) throw error
+    }
     const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError && authError.name !== 'AuthSessionMissingError') throw authError
+
+    stage = 'validate_variants'
+    const variantIds = items.map((item) => item.variantId)
+    const { data: variants, error: variantsError } = await supabaseAdmin
+      .from('product_variants')
+      .select('id, name, price, stock, is_active, product_id')
+      .in('id', variantIds)
+
+    if (variantsError) throw variantsError
+    if (!variants || variants.length !== variantIds.length) {
+      return NextResponse.json(
+        { success: false, error: 'One or more products are no longer available.' },
+        { status: 400 }
+      )
+    }
+
+    const variantMap = new Map(variants.map((variant) => [variant.id, variant]))
+    for (const item of items) {
+      const variant = variantMap.get(item.variantId)
+      if (!variant || !variant.is_active || variant.stock < item.quantity) {
+        return NextResponse.json(
+          { success: false, error: 'A product is unavailable or has insufficient stock.' },
+          { status: 400 }
+        )
+      }
+    }
+
+    const productIds = [...new Set(variants.map((variant) => variant.product_id))]
+    const { data: products, error: productsError } = await supabaseAdmin
+      .from('products')
+      .select('id, is_active')
+      .in('id', productIds)
+    if (productsError) throw productsError
+    if (!products || products.length !== productIds.length || products.some((product) => !product.is_active)) {
+      return NextResponse.json(
+        { success: false, error: 'A product is no longer available.' },
+        { status: 400 }
+      )
+    }
+
+    const orderItems = items.map((item) => {
+      const variant = variantMap.get(item.variantId)!
+      const unitPrice = Number(variant.price)
+      return {
+        variant_id: item.variantId,
+        variant_name: variant.name,
+        quantity: item.quantity,
+        unit_price: unitPrice,
+        total_price: unitPrice * item.quantity,
+      }
+    })
+    if (orderItems.some((item) => !Number.isFinite(item.unit_price) || item.unit_price <= 0)) {
+      return NextResponse.json(
+        { success: false, error: 'A product has an invalid price.' },
+        { status: 400 }
+      )
+    }
+    const subtotal = orderItems.reduce((sum, item) => sum + item.total_price, 0)
+
+    let discount = 0
+    let coupon: { id: string; used_count: number } | null = null
+    if (couponCode) {
+      stage = 'validate_coupon'
+      const { data: couponData, error: couponError } = await supabaseAdmin
+        .from('coupons')
+        .select('id, code, type, value, min_order, max_uses, used_count, expires_at')
+        .eq('code', couponCode.toUpperCase())
+        .eq('is_active', true)
+        .maybeSingle()
+
+      if (couponError) throw couponError
+      if (
+        !couponData ||
+        (couponData.expires_at && new Date(couponData.expires_at) < new Date()) ||
+        (couponData.min_order !== null && subtotal < couponData.min_order) ||
+        (couponData.max_uses !== null && couponData.used_count >= couponData.max_uses) ||
+        couponData.value <= 0 ||
+        (couponData.type === 'percent' && couponData.value > 100)
+      ) {
+        return NextResponse.json(
+          { success: false, error: 'The coupon is invalid, expired, or not applicable to this order.' },
+          { status: 400 }
+        )
+      }
+
+      coupon = { id: couponData.id, used_count: couponData.used_count }
+      discount = couponData.type === 'percent'
+        ? Math.round((subtotal * couponData.value) / 100)
+        : Number(couponData.value)
+      discount = Math.min(discount, subtotal)
+    }
+
+    const afterDiscount = subtotal - discount
+    const shipping = afterDiscount >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST
+    const total = afterDiscount + shipping
+    if (!Number.isSafeInteger(Math.round(total * 100)) || total <= 0) {
+      return NextResponse.json(
+        { success: false, error: 'Order total must be greater than zero.' },
+        { status: 400 }
+      )
+    }
+
     const orderId = randomUUID()
     const orderNumber = generateOrderNumber()
-
-    const shippingAddress = {
-      name: formData.fullName,
-      phone: formData.phone,
-      line1: formData.addressLine1,
-      line2: formData.addressLine2 || '',
-      city: formData.city,
-      state: formData.state,
-      pincode: formData.pincode,
-    }
-
-    // Get current user if logged in
-    const { data: { user } } = await supabase.auth.getUser()
-
-    // Create the order
-    stage = 'save_order'
-    const { error: orderError } = await supabase
-      .from('orders')
-      .insert({
-        id: orderId,
-        order_number: orderNumber,
-        user_id: user?.id || null,
-        customer_name: formData.fullName,
-        customer_email: formData.email,
-        customer_phone: formData.phone,
-        shipping_address: shippingAddress,
-        status: 'pending',
-        payment_method: formData.paymentMethod,
-        payment_status: 'pending',
-        subtotal,
-        discount,
-        shipping,
-        total,
-        notes: formData.notes || null,
-      })
-
+    const { error: orderError } = await supabaseAdmin.from('orders').insert({
+      id: orderId,
+      order_number: orderNumber,
+      user_id: user?.id ?? null,
+      customer_name: formData.fullName,
+      customer_email: formData.email,
+      customer_phone: formData.phone,
+      shipping_address: {
+        name: formData.fullName,
+        phone: formData.phone,
+        line1: formData.addressLine1,
+        line2: formData.addressLine2 ?? '',
+        city: formData.city,
+        state: formData.state,
+        pincode: formData.pincode,
+      },
+      status: 'created',
+      fulfillment_status: 'pending',
+      payment_method: 'cod',
+      subtotal,
+      discount,
+      shipping,
+      total,
+      amount: total,
+      currency: 'INR',
+      notes: formData.notes || null,
+    })
     if (orderError) throw orderError
 
-    // Insert order items
-    stage = 'validate_items'
-    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-    const variantIds = [...new Set(
-      (items as CartProduct[])
-        .map((item) => item.variantId)
-        .filter((id): id is string => typeof id === 'string' && uuidPattern.test(id))
-    )]
-    const { data: variants, error: variantsError } = variantIds.length
-      ? await supabase.from('product_variants').select('id').in('id', variantIds)
-      : { data: [], error: null }
-    if (variantsError) throw variantsError
-    const existingVariantIds = new Set((variants ?? []).map((variant) => variant.id))
-
     stage = 'save_items'
-    const orderItems = items.map((item: CartProduct) => ({
-      order_id: orderId,
-      // Cart data is persisted in the browser and can outlive a deleted variant.
-      // Keep the order's item snapshot even if its optional variant reference is stale.
-      variant_id: existingVariantIds.has(item.variantId) ? item.variantId : null,
-      variant_name: item.variantName,
-      quantity: item.quantity,
-      unit_price: item.price,
-      total_price: item.price * item.quantity,
-    }))
-
-    let { error: itemsError } = await supabase
+    const { error: itemsError } = await supabaseAdmin
       .from('order_items')
-      .insert(orderItems)
-
-    if (itemsError?.code === '23503') {
-      const snapshotItems = orderItems.map((item) => ({ ...item, variant_id: null }))
-      const retry = await supabase.from('order_items').insert(snapshotItems)
-      itemsError = retry.error
-    }
-
+      .insert(orderItems.map((item) => ({ ...item, order_id: orderId })))
     if (itemsError) {
-      await supabase.from('orders').delete().eq('id', orderId)
+      await cleanupOrder(orderId)
       throw itemsError
     }
 
-    if (formData.paymentMethod === 'cod') {
-      // Keep COD orders in a pending state until admin confirmation/fulfillment.
-      // This avoids falsely showing a COD order as already confirmed when it still
-      // needs acceptance and dispatch processing.
-      return NextResponse.json({ success: true, orderId, orderNumber })
+    if (coupon) {
+      stage = 'reserve_coupon'
+      const { data: updatedCoupon, error: couponUpdateError } = await supabaseAdmin
+        .from('coupons')
+        .update({ used_count: coupon.used_count + 1 })
+        .eq('id', coupon.id)
+        .eq('used_count', coupon.used_count)
+        .select('id')
+        .maybeSingle()
+
+      if (couponUpdateError) {
+        await cleanupOrder(orderId)
+        throw couponUpdateError
+      }
+      if (!updatedCoupon) {
+        await cleanupOrder(orderId)
+        return NextResponse.json(
+          { success: false, error: 'This coupon was just used up. Please try another coupon.' },
+          { status: 409 }
+        )
+      }
     }
 
-    // Create Razorpay order
-    stage = 'create_payment'
-    const Razorpay = (await import('razorpay')).default
-    const razorpay = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID!,
-      key_secret: process.env.RAZORPAY_KEY_SECRET!,
-    })
-
-    const razorpayOrder = await razorpay.orders.create({
-      amount: Math.round(total * 100), // in paise
-      currency: 'INR',
-      receipt: orderNumber,
-    })
-
-    // Store razorpay order id
-    stage = 'save_payment'
-    const { error: paymentError } = await supabase.from('payments').insert({
-      order_id: orderId,
-      razorpay_order_id: razorpayOrder.id,
-      amount: total,
-      status: 'pending',
-    })
-    if (paymentError) throw paymentError
-
-    return NextResponse.json({
-      success: true,
-      orderId,
-      orderNumber,
-      razorpayOrder,
-    })
-  } catch (error) {
-    console.error(`Order creation failed at ${stage} (reference ${reference}):`, error)
-    const errorMessages: Record<string, string> = {
-      request: 'The order request could not be read.',
-      database_connection: 'Could not connect to the order service.',
-      save_order: 'Could not save your order.',
-      validate_items: 'Could not validate the products in your cart.',
-      save_items: 'Could not save the items in your order. Please refresh your cart and try again.',
-      create_payment: 'Could not start online payment.',
-      save_payment: 'Could not save the payment details.',
-    }
-
-    return NextResponse.json({
-      success: false,
-      error: `${errorMessages[stage] || 'Could not complete your order.'} Reference: ${reference}`,
-      stage,
-      reference,
-    }, { status: 500 })
+    return NextResponse.json({ success: true, orderId, orderNumber })
+  } catch {
+    console.error(`Order creation failed at ${stage} (reference ${reference}).`)
+    return NextResponse.json(
+      { success: false, error: `Could not complete your order. Reference: ${reference}` },
+      { status: 500 }
+    )
   }
 }
 
 export async function GET() {
   try {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return NextResponse.json({ success: false, error: 'Unauthorized.' }, { status: 401 })
+    }
 
-    const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .maybeSingle()
+    if (profileError) throw profileError
 
-    let query = supabase.from('orders').select('*, order_items(*)').order('created_at', { ascending: false })
+    let query = supabase
+      .from('orders')
+      .select('*, order_items(*)')
+      .order('created_at', { ascending: false })
     if (!profile?.is_admin) query = query.eq('user_id', user.id)
 
     const { data, error } = await query
     if (error) throw error
     return NextResponse.json({ success: true, data })
   } catch {
-    return NextResponse.json({ success: false, data: [] })
+    console.error('Order history could not be loaded.')
+    return NextResponse.json(
+      { success: false, error: 'Could not load orders.' },
+      { status: 500 }
+    )
   }
 }

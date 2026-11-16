@@ -4,8 +4,36 @@ import { Fragment } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { formatPrice } from '@/lib/utils/helpers'
 import { ArrowLeft, ShoppingBag } from 'lucide-react'
+import type { Database } from '@/types/database'
 
 export const metadata: Metadata = { title: 'Orders | Admin' }
+
+type AdminOrder = Pick<
+  Database['public']['Tables']['orders']['Row'],
+  | 'id'
+  | 'order_number'
+  | 'customer_name'
+  | 'customer_email'
+  | 'customer_phone'
+  | 'shipping_address'
+  | 'status'
+  | 'fulfillment_status'
+  | 'payment_method'
+  | 'total'
+  | 'notes'
+  | 'created_at'
+> & {
+  order_items: Pick<
+    Database['public']['Tables']['order_items']['Row'],
+    'quantity' | 'variant_name' | 'unit_price'
+  >[]
+}
+
+function getAddressValue(address: AdminOrder['shipping_address'], key: string): string | undefined {
+  if (typeof address !== 'object' || address === null || Array.isArray(address)) return undefined
+  const value = address[key]
+  return typeof value === 'string' ? value : undefined
+}
 
 const statusColors: Record<string, string> = {
   pending: 'bg-amber-100 text-amber-700',
@@ -28,7 +56,7 @@ const statusLabels: Record<string, string> = {
 }
 
 export default async function AdminOrdersPage() {
-  let orders: any[] = []
+  let orders: AdminOrder[] = []
 
   try {
     const supabase = await createClient()
@@ -42,9 +70,9 @@ export default async function AdminOrdersPage() {
     // DB not configured
   }
 
-  const totalRevenue = orders.filter(o => o.payment_status === 'paid').reduce((s, o) => s + o.total, 0)
-  const pending = orders.filter(o => o.status === 'pending').length
-  const delivered = orders.filter(o => o.status === 'delivered').length
+  const totalRevenue = orders.filter(o => o.status === 'paid').reduce((s, o) => s + o.total, 0)
+  const pending = orders.filter(o => o.fulfillment_status === 'pending').length
+  const delivered = orders.filter(o => o.fulfillment_status === 'delivered').length
 
   return (
     <div className="min-h-screen bg-light-bg">
@@ -104,13 +132,13 @@ export default async function AdminOrdersPage() {
                       <td className="px-4 py-3 text-green-secondary text-xs">{order.order_items?.length || 0}</td>
                       <td className="px-4 py-3 font-bold text-navy-dark text-xs">{formatPrice(order.total)}</td>
                       <td className="px-4 py-3">
-                        <span className={`text-[10px] px-2 py-0.5 ${order.payment_status === 'paid' ? 'bg-green-100 text-green-700' : order.payment_method === 'cod' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
-                          {order.payment_status === 'paid' ? 'Paid' : order.payment_method === 'cod' ? 'COD' : 'Pending'}
+                        <span className={`text-[10px] px-2 py-0.5 ${order.status === 'paid' ? 'bg-green-100 text-green-700' : order.status === 'failed' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                          {order.status === 'paid' ? 'Paid' : order.status === 'failed' ? 'Failed' : order.payment_method === 'cod' ? 'COD' : 'Pending'}
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`text-[10px] px-2 py-0.5 ${statusColors[order.status] || 'bg-gray-100 text-gray-700'}`}>
-                          {statusLabels[order.status] || order.status}
+                        <span className={`text-[10px] px-2 py-0.5 ${statusColors[order.fulfillment_status] || 'bg-gray-100 text-gray-700'}`}>
+                          {statusLabels[order.fulfillment_status] || order.fulfillment_status}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-green-secondary text-xs whitespace-nowrap">
@@ -128,10 +156,14 @@ export default async function AdminOrdersPage() {
                           </div>
                           <div>
                             <p className="font-semibold text-navy-dark mb-2">Delivery Address</p>
-                            <p>{order.shipping_address?.line1 || '-'}</p>
-                            {order.shipping_address?.line2 && <p>{order.shipping_address.line2}</p>}
+                            <p>{getAddressValue(order.shipping_address, 'line1') || '-'}</p>
+                            {getAddressValue(order.shipping_address, 'line2') && <p>{getAddressValue(order.shipping_address, 'line2')}</p>}
                             <p>
-                              {[order.shipping_address?.city, order.shipping_address?.state, order.shipping_address?.pincode]
+                              {[
+                                getAddressValue(order.shipping_address, 'city'),
+                                getAddressValue(order.shipping_address, 'state'),
+                                getAddressValue(order.shipping_address, 'pincode'),
+                              ]
                                 .filter(Boolean)
                                 .join(', ') || '-'}
                             </p>

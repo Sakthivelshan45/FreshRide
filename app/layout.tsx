@@ -9,6 +9,7 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://butterflyfreshride.com'),
   title: {
     default: 'Butterfly Fresh Ride | Disposable Travel Bedding Kit',
     template: '%s | Butterfly Fresh Ride',

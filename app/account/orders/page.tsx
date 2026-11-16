@@ -1,14 +1,18 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { formatPrice } from '@/lib/utils/helpers'
 import { ShoppingBag, Package } from 'lucide-react'
+import type { Database } from '@/types/database'
 
 export const metadata: Metadata = { title: 'My Orders | Butterfly Fresh Ride' }
 
+type AccountOrder = Database['public']['Tables']['orders']['Row'] & {
+  order_items: Database['public']['Tables']['order_items']['Row'][]
+}
+
 export default async function MyOrdersPage() {
-  let orders: any[] = []
+  let orders: AccountOrder[] = []
 
   try {
     const supabase = await createClient()
@@ -81,8 +85,8 @@ export default async function MyOrdersPage() {
                     <p className="text-sm font-bold text-navy-dark">{formatPrice(order.total)}</p>
                   </div>
                   <div>
-                    <span className={`text-xs font-semibold px-3 py-1.5 rounded-full ${statusColors[order.status] || 'bg-gray-100 text-gray-700'}`}>
-                      {statusLabels[order.status] || order.status}
+                    <span className={`text-xs font-semibold px-3 py-1.5 rounded-full ${statusColors[order.fulfillment_status] || 'bg-gray-100 text-gray-700'}`}>
+                      {statusLabels[order.fulfillment_status] || order.fulfillment_status}
                     </span>
                   </div>
                 </div>

@@ -1,32 +1,69 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 
-export async function POST(request: NextRequest) {
-  try {
-    const { code, subtotal } = await request.json()
-    const supabase = await createClient()
+const couponRequestSchema = z.object({
+  code: z.string().trim().min(1).max(50),
+  subtotal: z.number().finite().nonnegative(),
+})
 
-    const { data: coupon } = await supabase
+export async function POST(request: NextRequest) {
+  let body: unknown
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json(
+      { success: false, error: 'Request body must be valid JSON.' },
+      { status: 400 }
+    )
+  }
+
+  const parsed = couponRequestSchema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json(
+      { success: false, error: 'Enter a valid coupon code.' },
+      { status: 400 }
+    )
+  }
+
+  try {
+    const supabase = await createClient()
+    const { data: coupon, error } = await supabase
       .from('coupons')
       .select('*')
-      .eq('code', code)
+      .eq('code', parsed.data.code.toUpperCase())
       .eq('is_active', true)
-      .single()
+      .maybeSingle()
 
-    if (!coupon) return NextResponse.json({ success: false, error: 'Invalid or expired coupon code' })
-    if (coupon.expires_at && new Date(coupon.expires_at) < new Date())
-      return NextResponse.json({ success: false, error: 'This coupon has expired' })
-    if (coupon.min_order && subtotal < coupon.min_order)
-      return NextResponse.json({ success: false, error: `Minimum order of ₹${coupon.min_order} required for this coupon` })
-    if (coupon.max_uses && coupon.used_count >= coupon.max_uses)
-      return NextResponse.json({ success: false, error: 'This coupon has reached its usage limit' })
+    if (error) throw error
+    if (
+      !coupon ||
+      (coupon.expires_at && new Date(coupon.expires_at) < new Date()) ||
+      (coupon.min_order !== null && parsed.data.subtotal < coupon.min_order) ||
+      (coupon.max_uses !== null && coupon.used_count >= coupon.max_uses) ||
+      coupon.value <= 0 ||
+      (coupon.type === 'percent' && coupon.value > 100)
+    ) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid, expired, or inapplicable coupon code.' },
+        { status: 400 }
+      )
+    }
 
     const discount = coupon.type === 'percent'
-      ? Math.round((subtotal * coupon.value) / 100)
-      : coupon.value
+      ? Math.round((parsed.data.subtotal * coupon.value) / 100)
+      : Number(coupon.value)
 
-    return NextResponse.json({ success: true, code: coupon.code, discount })
+    return NextResponse.json({
+      success: true,
+      code: coupon.code,
+      discount: Math.min(discount, parsed.data.subtotal),
+    })
   } catch {
-    return NextResponse.json({ success: false, error: 'Failed to validate coupon' })
+    console.error('Coupon validation could not be completed.')
+    return NextResponse.json(
+      { success: false, error: 'Could not validate this coupon. Please try again.' },
+      { status: 500 }
+    )
   }
 }
