@@ -7,25 +7,96 @@ import { Package, ShoppingBag, MessageSquare, TrendingUp, CheckCircle, AlertCirc
 export const metadata: Metadata = { title: 'Admin Dashboard | Butterfly Fresh Ride' }
 export const dynamic = 'force-dynamic'
 
+const ORDER_PAGE_SIZE = 1000
+const REVENUE_PAGE_CONCURRENCY = 4
+
+async function getTotalPaidRevenue(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  paidOrderCount: number
+) {
+  let total = 0
+  const pageCount = Math.ceil(paidOrderCount / ORDER_PAGE_SIZE)
+
+  for (let firstPage = 0; firstPage < pageCount; firstPage += REVENUE_PAGE_CONCURRENCY) {
+    const pageRequests = Array.from(
+      { length: Math.min(REVENUE_PAGE_CONCURRENCY, pageCount - firstPage) },
+      (_, index) => {
+        const from = (firstPage + index) * ORDER_PAGE_SIZE
+        return supabase
+          .from('orders')
+          .select('total')
+          .eq('status', 'paid')
+          .order('id', { ascending: true })
+          .range(from, from + ORDER_PAGE_SIZE - 1)
+      }
+    )
+    const pages = await Promise.all(pageRequests)
+
+    for (const page of pages) {
+      if (page.error) throw page.error
+      total += (page.data ?? []).reduce((sum, order) => sum + Number(order.total ?? 0), 0)
+    }
+  }
+
+  return total
+}
+
 export default async function AdminDashboard() {
   const supabase = await createClient()
 
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const { data: profile } = user
+    ? await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .maybeSingle()
+    : { data: null }
+
+  const metadataName =
+    typeof user?.user_metadata?.full_name === 'string'
+      ? user.user_metadata.full_name
+      : ''
+
+  const displayName =
+    profile?.full_name?.trim() ||
+    metadataName.trim() ||
+    user?.email?.split('@')[0] ||
+    'Admin'
+
   const [
-    { data: orders },
-    { data: products },
-    { count: enquiryCount },
+    { data: orders, error: ordersError },
+    { data: products, error: productsError },
+    { count: enquiryCount, error: enquiryCountError },
+    { count: totalOrderCount, error: totalOrderCountError },
+    { count: pendingOrderCount, error: pendingOrderCountError },
+    { count: activeProductCount, error: activeProductCountError },
+    { count: paidOrderCount, error: paidOrderCountError },
   ] = await Promise.all([
     supabase.from('orders').select('id, total, status, fulfillment_status, created_at, customer_name, order_number').order('created_at', { ascending: false }).limit(5),
     supabase.from('products').select('id, name, slug, is_active, product_variants(price, is_active)'),
     supabase.from('business_enquiries').select('id', { count: 'exact', head: true }).eq('status', 'new'),
+    supabase.from('orders').select('id', { count: 'exact', head: true }),
+    supabase.from('orders').select('id', { count: 'exact', head: true }).eq('fulfillment_status', 'pending'),
+    supabase.from('products').select('id', { count: 'exact', head: true }).eq('is_active', true),
+    supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'paid'),
   ])
+
+  if (ordersError) throw ordersError
+  if (productsError) throw productsError
+  if (enquiryCountError) throw enquiryCountError
+  if (totalOrderCountError) throw totalOrderCountError
+  if (pendingOrderCountError) throw pendingOrderCountError
+  if (activeProductCountError) throw activeProductCountError
+  if (paidOrderCountError) throw paidOrderCountError
 
   const safeOrders = (orders ?? []) as Array<{ id: string; total: number; status: string; fulfillment_status: string; created_at: string; customer_name: string; order_number: string }>
   const safeProducts = (products ?? []) as Array<{ id: string; name: string; slug: string; is_active: boolean; product_variants: { price: number; is_active: boolean }[] }>
 
-  const totalRevenue = safeOrders.filter(o => o.status === 'paid').reduce((s, o) => s + (o.total ?? 0), 0)
-  const pendingOrders = safeOrders.filter(o => o.fulfillment_status === 'pending').length
-  const activeProducts = safeProducts.filter(p => p.is_active).length
+  const totalRevenue = await getTotalPaidRevenue(supabase, paidOrderCount ?? 0)
+  const pendingOrders = pendingOrderCount ?? 0
+  const activeProducts = activeProductCount ?? 0
   const comingSoonProducts = safeProducts.filter(p => {
     const v = p.product_variants?.[0]
     return v && v.price === 0
@@ -43,14 +114,16 @@ export default async function AdminDashboard() {
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="mb-6 sm:mb-8">
         <h1 className="font-serif text-2xl sm:text-3xl text-navy-dark mb-1">Dashboard</h1>
-        <p className="text-green-secondary text-sm">Welcome back! Here&apos;s what&apos;s happening in your store.</p>
+          <p className="text-green-secondary text-sm">
+            Welcome back, {displayName}! Here&apos;s what&apos;s happening in your store.
+          </p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
         {[
           { label: 'Total Revenue', value: formatPrice(totalRevenue), icon: TrendingUp, color: 'text-green-primary', bg: 'bg-green-50', note: 'From paid orders' },
-          { label: 'Total Orders', value: String(safeOrders.length), icon: ShoppingBag, color: 'text-blue-600', bg: 'bg-blue-50', note: `${pendingOrders} pending` },
+          { label: 'Total Orders', value: String(totalOrderCount ?? 0), icon: ShoppingBag, color: 'text-blue-600', bg: 'bg-blue-50', note: `${pendingOrders} pending` },
           { label: 'Active Products', value: String(activeProducts), icon: Package, color: 'text-purple-600', bg: 'bg-purple-50', note: `${comingSoonProducts} coming soon` },
           { label: 'New Enquiries', value: String(enquiryCount ?? 0), icon: MessageSquare, color: 'text-gold-accent', bg: 'bg-amber-50', note: 'Needs follow-up' },
         ].map((stat) => (
