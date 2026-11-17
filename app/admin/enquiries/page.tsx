@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { ArrowLeft, MessageSquare, Mail, Phone, Building2 } from 'lucide-react'
+import EnquiriesExportControls from '@/components/admin/EnquiriesExportControls'
 
 export const metadata: Metadata = { title: 'B2B Enquiries | Admin' }
 
@@ -54,6 +55,8 @@ export default async function AdminEnquiriesPage() {
             ))}
           </div>
         </div>
+
+        <EnquiriesExportControls />
 
         {enquiries.length === 0 ? (
           <div className="bg-white border border-silver p-10 text-center">

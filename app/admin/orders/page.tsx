@@ -5,6 +5,13 @@ import { createClient } from '@/lib/supabase/server'
 import { formatPrice } from '@/lib/utils/helpers'
 import { ArrowLeft, ShoppingBag } from 'lucide-react'
 import type { Database } from '@/types/database'
+import OrdersExportControls from '@/components/admin/OrdersExportControls'
+import {
+  buildOrderExportSearchCondition,
+  EMPTY_ORDER_EXPORT_FILTERS,
+  getOrderExportDateBounds,
+  parseOrderExportFilters,
+} from '@/lib/admin/orders-export'
 
 export const metadata: Metadata = { title: 'Orders | Admin' }
 
@@ -55,16 +62,35 @@ const statusLabels: Record<string, string> = {
   refunded: 'Refunded',
 }
 
-export default async function AdminOrdersPage() {
+export default async function AdminOrdersPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const rawSearchParams = await searchParams
+  const filterParams = new URLSearchParams()
+  for (const key of ['status', 'from', 'to', 'search']) {
+    const value = rawSearchParams[key]
+    if (typeof value === 'string') filterParams.set(key, value)
+  }
+  const parsedFilters = parseOrderExportFilters(filterParams)
+  const filters = parsedFilters.error ? EMPTY_ORDER_EXPORT_FILTERS : parsedFilters.filters
   let orders: AdminOrder[] = []
 
   try {
     const supabase = await createClient()
-    const { data } = await supabase
+    let query = supabase
       .from('orders')
       .select('*, order_items(quantity, variant_name, unit_price)')
       .order('created_at', { ascending: false })
-      .limit(100)
+    const dateBounds = getOrderExportDateBounds(filters)
+    if (filters.status) query = query.eq('fulfillment_status', filters.status)
+    if (dateBounds.fromInclusive) query = query.gte('created_at', dateBounds.fromInclusive)
+    if (dateBounds.toExclusive) query = query.lt('created_at', dateBounds.toExclusive)
+    if (filters.search) {
+      query = query.or(buildOrderExportSearchCondition(filters.search))
+    }
+    const { data } = await query.limit(100)
     if (data) orders = data
   } catch {
     // DB not configured
@@ -86,7 +112,9 @@ export default async function AdminOrdersPage() {
         </Link>
       </header>
 
-      <div className="max-w-6xl mx-auto p-8">
+      <div className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">
+        <OrdersExportControls filters={filters} />
+
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {[
@@ -107,11 +135,88 @@ export default async function AdminOrdersPage() {
             No orders yet, or database is not configured.
           </div>
         ) : (
-          <div className="bg-white border border-silver">
-            <div className="p-5 border-b border-silver">
+          <div className="border border-silver bg-white">
+            <div className="border-b border-silver p-4 sm:p-5">
               <h3 className="font-medium text-navy-dark">All Orders ({orders.length})</h3>
             </div>
-            <div className="overflow-x-auto">
+            <div className="space-y-3 p-3 lg:hidden">
+              {orders.map((order) => (
+                <article key={order.id} className="border border-silver p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-green-secondary">Order</p>
+                      <p className="break-all font-mono text-xs font-semibold text-navy-dark">{order.order_number}</p>
+                      <p className="mt-1 text-xs text-green-secondary">
+                        {new Date(order.created_at).toLocaleDateString('en-IN')}
+                      </p>
+                    </div>
+                    <p className="shrink-0 text-right text-sm font-bold text-navy-dark">
+                      {formatPrice(order.total)}
+                    </p>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className={`text-[10px] px-2 py-1 ${order.status === 'paid' ? 'bg-green-100 text-green-700' : order.status === 'failed' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                      {order.status === 'paid' ? 'Paid' : order.status === 'failed' ? 'Failed' : order.payment_method === 'cod' ? 'COD' : 'Pending'}
+                    </span>
+                    <span className={`text-[10px] px-2 py-1 ${statusColors[order.fulfillment_status] || 'bg-gray-100 text-gray-700'}`}>
+                      {statusLabels[order.fulfillment_status] || order.fulfillment_status}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 border-t border-silver pt-3">
+                    <p className="text-xs font-semibold text-navy-dark">Customer</p>
+                    <p className="mt-1 break-words text-sm text-navy-dark">{order.customer_name}</p>
+                    <p className="break-words text-xs text-green-secondary">{order.customer_email || 'No email provided'}</p>
+                    <p className="text-xs text-green-secondary">{order.customer_phone}</p>
+                  </div>
+
+                  <div className="mt-4 border-t border-silver pt-3">
+                    <p className="text-xs font-semibold text-navy-dark">
+                      Items ({order.order_items?.length || 0})
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {(order.order_items || []).map((item, index) => (
+                        <span key={`${order.id}-mobile-${index}`} className="max-w-full break-words bg-light-bg px-2 py-1 text-xs text-green-secondary">
+                          {item.variant_name || 'Item'} × {item.quantity || 0}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 border-t border-silver pt-3">
+                    <div>
+                      <p className="text-xs font-semibold text-navy-dark">Delivery address</p>
+                      <p className="mt-1 break-words text-xs text-green-secondary">
+                        {getAddressValue(order.shipping_address, 'line1') || '-'}
+                      </p>
+                      {getAddressValue(order.shipping_address, 'line2') && (
+                        <p className="break-words text-xs text-green-secondary">
+                          {getAddressValue(order.shipping_address, 'line2')}
+                        </p>
+                      )}
+                      <p className="break-words text-xs text-green-secondary">
+                        {[
+                          getAddressValue(order.shipping_address, 'city'),
+                          getAddressValue(order.shipping_address, 'state'),
+                          getAddressValue(order.shipping_address, 'pincode'),
+                        ]
+                          .filter(Boolean)
+                          .join(', ') || '-'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-navy-dark">Order notes</p>
+                      <p className="mt-1 whitespace-pre-wrap break-words text-xs text-green-secondary">
+                        {order.notes || 'No customer note'}
+                      </p>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            <div className="hidden overflow-x-auto lg:block">
               <table className="w-full text-sm">
                 <thead className="bg-light-bg">
                   <tr>

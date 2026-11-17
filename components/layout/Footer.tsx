@@ -174,7 +174,7 @@ export default function Footer() {
             © {currentYear} Butterfly Fresh Ride. All rights reserved. A Butterfly Groups brand.
           </p>
           <p className="text-green-secondary text-xs">
-            Designed for comfort. Made for travel.
+            Designed for comfort. Build for Modern Travel. 
           </p>
         </div>
       </div>
