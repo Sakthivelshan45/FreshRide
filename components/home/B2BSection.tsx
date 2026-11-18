@@ -31,6 +31,7 @@ const targets = [
 export default function B2BSection() {
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [submissionError, setSubmissionError] = useState<string | null>(null)
 
   const {
     register,
@@ -43,18 +44,35 @@ export default function B2BSection() {
 
   const onSubmit = async (data: BusinessEnquiryFormData) => {
     setSubmitting(true)
+    setSubmissionError(null)
     try {
       const res = await fetch('/api/enquiries', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       })
-      if (res.ok) {
-        setSubmitted(true)
-        reset()
+
+      const result: unknown = await res.json()
+      if (typeof result !== 'object' || result === null) {
+        setSubmissionError('Could not submit enquiry. Please try again or WhatsApp us.')
+        return
       }
+
+      const succeeded = 'success' in result && result.success === true
+      if (!res.ok || !succeeded) {
+        const message =
+          'error' in result && typeof result.error === 'string'
+            ? result.error
+            : 'Could not submit enquiry. Please try again or WhatsApp us.'
+        setSubmissionError(message)
+        return
+      }
+
+      setSubmitted(true)
+      reset()
     } catch (err) {
       console.error('Enquiry submission error:', err)
+      setSubmissionError('Could not submit enquiry. Please try again or WhatsApp us.')
     } finally {
       setSubmitting(false)
     }
@@ -274,6 +292,12 @@ export default function B2BSection() {
                       <MessageSquare size={16} />
                       {submitting ? 'Sending Enquiry...' : 'Submit Bulk Enquiry'}
                     </button>
+
+                    {submissionError && (
+                      <p role="alert" className="text-red-600 text-sm text-center">
+                        {submissionError}
+                      </p>
+                    )}
 
                     <p className="text-xs text-green-secondary text-center">
                       We will respond within 24 hours with a personalised quotation.

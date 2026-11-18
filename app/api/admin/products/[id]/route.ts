@@ -1,9 +1,23 @@
 import { NextResponse } from 'next/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+import { adminProductSchema } from '@/lib/validations/schemas'
+import { z } from 'zod'
+
+const productIdSchema = z.string().uuid()
+const productVisibilitySchema = z.object({ is_active: z.boolean() }).strict()
 
 // PATCH /api/admin/products/[id] — update product + variant
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  const parsedId = productIdSchema.safeParse(id)
+  if (!parsedId.success) {
+    return NextResponse.json(
+      { error: 'Invalid product ID.', details: parsedId.error.flatten().formErrors },
+      { status: 400 }
+    )
+  }
+
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -11,23 +25,135 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
   if (!(profile as any)?.is_admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const body = await req.json()
-  const { name, slug, short_description, description, category, feature_tags, is_active, price, compare_price, stock } = body
+  const supabaseAdmin = createAdminClient()
 
-  // Update product
-  const { error: productError } = await supabase
+  let body: unknown
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid product data.', details: ['Request body must be valid JSON.'] }, { status: 400 })
+  }
+
+  if (
+    typeof body === 'object' &&
+    body !== null &&
+    !Array.isArray(body) &&
+    Object.keys(body).length === 1 &&
+    'is_active' in body
+  ) {
+    const parsedVisibility = productVisibilitySchema.safeParse(body)
+    if (!parsedVisibility.success) {
+      return NextResponse.json(
+        { error: 'Invalid product visibility.', details: parsedVisibility.error.flatten().fieldErrors },
+        { status: 400 }
+      )
+    }
+
+    const { error: visibilityError } = await supabaseAdmin
+      .from('products')
+      .update({ is_active: parsedVisibility.data.is_active, updated_at: new Date().toISOString() })
+      .eq('id', parsedId.data)
+
+    if (visibilityError) {
+      console.error('Product visibility update failed:', visibilityError)
+      return NextResponse.json({ error: 'Could not update product visibility.' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  }
+
+  const parsed = adminProductSchema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'Invalid product data.', details: parsed.error.flatten().fieldErrors },
+      { status: 400 }
+    )
+  }
+
+  const { name, slug, short_description, description, category, feature_tags, is_active, price, compare_price, stock, image_url } = parsed.data
+
+  const { error: productError } = await supabaseAdmin
     .from('products')
     .update({ name, slug, short_description, description, category, feature_tags, is_active, updated_at: new Date().toISOString() })
-    .eq('id', id)
+    .eq('id', parsedId.data)
 
-  if (productError) return NextResponse.json({ error: productError.message }, { status: 400 })
+  if (productError) {
+    console.error('Product update failed:', productError)
+    return NextResponse.json({ error: 'Could not update product.' }, { status: 500 })
+  }
 
-  // Update or create variant
-  const { data: variants } = await supabase.from('product_variants').select('id').eq('product_id', id).limit(1)
-  if (variants && variants.length > 0) {
-    await supabase.from('product_variants').update({ price: Number(price), compare_price: compare_price ? Number(compare_price) : null, stock: Number(stock), is_active }).eq('id', (variants[0] as any).id)
+  const { data: variant, error: variantLookupError } = await supabaseAdmin
+    .from('product_variants')
+    .select('id')
+    .eq('product_id', parsedId.data)
+    .limit(1)
+    .maybeSingle()
+  if (variantLookupError) {
+    console.error('Product variant lookup failed:', variantLookupError)
+    return NextResponse.json({ error: 'Could not load product variant.' }, { status: 500 })
+  }
+
+  if (variant) {
+    const { error: variantError } = await supabaseAdmin
+      .from('product_variants')
+      .update({ price, compare_price, stock, is_active })
+      .eq('id', variant.id)
+    if (variantError) {
+      console.error('Product variant update failed:', variantError)
+      return NextResponse.json({ error: 'Could not update product variant.' }, { status: 500 })
+    }
   } else {
-    await supabase.from('product_variants').insert({ product_id: id, name: 'Single Unit', price: Number(price), compare_price: compare_price ? Number(compare_price) : null, stock: Number(stock), pack_quantity: 1, is_active, sort_order: 1 })
+    const { error: variantError } = await supabaseAdmin.from('product_variants').insert({
+      product_id: parsedId.data,
+      name: 'Single Unit',
+      price,
+      compare_price,
+      stock,
+      pack_quantity: 1,
+      is_active,
+      sort_order: 1,
+    })
+    if (variantError) {
+      console.error('Product variant insert failed:', variantError)
+      return NextResponse.json({ error: 'Could not create product variant.' }, { status: 500 })
+    }
+  }
+
+  if (image_url) {
+    const { data: image, error: imageLookupError } = await supabaseAdmin
+      .from('product_images')
+      .select('id')
+      .eq('product_id', parsedId.data)
+      .eq('is_primary', true)
+      .limit(1)
+      .maybeSingle()
+    if (imageLookupError) {
+      console.error('Product image lookup failed:', imageLookupError)
+      return NextResponse.json({ error: 'Could not load product image.' }, { status: 500 })
+    }
+
+    if (image) {
+      const { error: imageError } = await supabaseAdmin
+        .from('product_images')
+        .update({ url: image_url, alt: `${name} - Fresh Ride` })
+        .eq('id', image.id)
+      if (imageError) {
+        console.error('Product image update failed:', imageError)
+        return NextResponse.json({ error: 'Could not update product image.' }, { status: 500 })
+      }
+    } else {
+      const { error: imageError } = await supabaseAdmin.from('product_images').insert({
+        product_id: parsedId.data,
+        url: image_url,
+        alt: `${name} - Fresh Ride`,
+        sort_order: 1,
+        is_primary: true,
+      })
+      if (imageError) {
+        console.error('Product image insert failed:', imageError)
+        return NextResponse.json({ error: 'Could not create product image.' }, { status: 500 })
+      }
+    }
   }
 
   return NextResponse.json({ success: true })
@@ -36,6 +162,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 // DELETE /api/admin/products/[id]
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  const parsedId = productIdSchema.safeParse(id)
+  if (!parsedId.success) {
+    return NextResponse.json(
+      { error: 'Invalid product ID.', details: parsedId.error.flatten().formErrors },
+      { status: 400 }
+    )
+  }
+
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -43,8 +177,12 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
   if (!(profile as any)?.is_admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { error } = await supabase.from('products').delete().eq('id', id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+  const supabaseAdmin = createAdminClient()
+  const { error } = await supabaseAdmin.from('products').delete().eq('id', parsedId.data)
+  if (error) {
+    console.error('Product delete failed:', error)
+    return NextResponse.json({ error: 'Could not delete product.' }, { status: 500 })
+  }
 
   return NextResponse.json({ success: true })
 }

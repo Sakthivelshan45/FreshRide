@@ -12,12 +12,27 @@ export default async function ProfilePage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, phone')
+    .select('full_name, phone, avatar_path')
     .eq('id', user.id)
     .single()
 
   const fullName = profile?.full_name || user.user_metadata.full_name || ''
   const phone = profile?.phone || user.user_metadata.phone || ''
+  let avatarUrl: string | null = null
+
+  if (profile?.avatar_path) {
+    const { data: avatar, error } = await supabase
+      .storage
+      .from('profile-avatars')
+      .createSignedUrl(profile.avatar_path, 60 * 60)
+
+    if (error) {
+      console.error('Profile avatar URL creation failed:', error)
+      throw new Error('Could not load profile photo.')
+    }
+
+    avatarUrl = avatar.signedUrl
+  }
 
   return (
     <div className="min-h-screen bg-light-bg pt-20">
@@ -31,6 +46,7 @@ export default async function ProfilePage() {
           fullName={fullName}
           phone={phone}
           email={user.email || ''}
+          avatarUrl={avatarUrl}
         />
       </div>
     </div>

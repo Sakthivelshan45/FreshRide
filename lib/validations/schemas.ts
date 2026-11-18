@@ -76,6 +76,20 @@ export const razorpayVerifySchema = z.object({
   razorpaySignature: z.string().regex(/^[a-f\d]{64}$/i),
 })
 
+export const adminProductSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  slug: z.string().trim().min(1).max(200).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  short_description: z.string().max(500),
+  description: z.string().max(10000),
+  category: z.string().max(100),
+  feature_tags: z.array(z.string().trim().min(1).max(100)).max(50),
+  is_active: z.boolean(),
+  price: z.number().finite().min(0).max(99999999.99),
+  compare_price: z.number().finite().min(0).max(99999999.99).nullable(),
+  stock: z.number().int().min(0).max(2147483647),
+  image_url: z.string().trim().max(2048).optional().default(''),
+})
+
 export const businessEnquirySchema = z.object({
   companyName: z.string().min(2, 'Company name is required'),
   contactPerson: z.string().min(2, 'Contact person name is required'),

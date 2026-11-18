@@ -57,17 +57,43 @@ export default function ProductForm({ product }: { product?: Product }) {
     const url = isEdit ? `/api/admin/products/${product.id}` : '/api/admin/products'
     const method = isEdit ? 'PATCH' : 'POST'
 
-    const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-    const data = await res.json()
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const responseText = await res.text()
+      let data: { success?: boolean; error?: string } | null = null
 
-    if (!res.ok || !data.success) {
-      setError(data.error ?? 'Something went wrong')
+      if (responseText) {
+        try {
+          const parsed: unknown = JSON.parse(responseText)
+          if (typeof parsed === 'object' && parsed !== null) {
+            const response = parsed as Record<string, unknown>
+            data = {
+              success: response.success === true,
+              error: typeof response.error === 'string' ? response.error : undefined,
+            }
+          }
+        } catch {
+          // Use the HTTP status below when the server response is not JSON.
+        }
+      }
+
+      if (!res.ok || !data?.success) {
+        setError(data?.error ?? `Could not save product (HTTP ${res.status}). Please try again.`)
+        return
+      }
+
+      setSuccess(true)
+      setTimeout(() => router.push('/admin/products'), 800)
+    } catch (err) {
+      console.error('Product submission failed:', err)
+      setError('Could not reach the server. Please try again.')
+    } finally {
       setSaving(false)
-      return
     }
-
-    setSuccess(true)
-    setTimeout(() => router.push('/admin/products'), 800)
   }
 
   const inputClass = "w-full border border-silver px-4 py-2.5 text-sm focus:outline-none focus:border-green-primary bg-white"

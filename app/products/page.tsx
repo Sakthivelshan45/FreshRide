@@ -26,6 +26,7 @@ export default async function ProductsPage() {
       product_images ( url, alt, is_primary ),
       product_variants ( price, is_active )
     `)
+    .eq('is_active', true)
     .order('created_at', { ascending: true })
 
   // Try category separately (may not exist in DB yet)

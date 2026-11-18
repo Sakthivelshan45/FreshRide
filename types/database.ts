@@ -104,6 +104,7 @@ export interface Database {
           id: string
           full_name: string | null
           phone: string | null
+          avatar_path: string | null
           is_admin: boolean
           created_at: string
           updated_at: string
@@ -112,6 +113,7 @@ export interface Database {
           id: string
           full_name?: string | null
           phone?: string | null
+          avatar_path?: string | null
           is_admin?: boolean
           created_at?: string
           updated_at?: string

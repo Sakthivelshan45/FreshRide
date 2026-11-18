@@ -18,6 +18,7 @@ export async function generateMetadata({ params }: Props) {
     .from('products')
     .select('name, short_description')
     .eq('slug', slug)
+    .eq('is_active', true)
     .single()
 
   if (!product) return { title: 'Product Not Found | Fresh Ride' }
@@ -47,6 +48,7 @@ export default async function ProductDetailPage({ params }: Props) {
       product_variants ( id, name, price, compare_price, pack_quantity, stock, is_active, sort_order )
     `)
     .eq('slug', slug)
+    .eq('is_active', true)
     .single()
 
   if (!product) notFound()
