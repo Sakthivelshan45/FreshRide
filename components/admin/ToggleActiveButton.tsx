@@ -3,7 +3,15 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-export default function ToggleActiveButton({ productId, isActive }: { productId: string; isActive: boolean }) {
+export default function ToggleActiveButton({
+  productId,
+  productName,
+  isActive,
+}: {
+  productId: string
+  productName: string
+  isActive: boolean
+}) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
@@ -50,7 +58,8 @@ export default function ToggleActiveButton({ productId, isActive }: { productId:
   return (
     <div className="flex flex-col items-start gap-1">
       <button onClick={toggle} disabled={loading}
-        className={`text-xs px-2 py-0.5 border transition-colors disabled:opacity-50 ${
+        aria-label={`${isActive ? 'Hide' : 'Show'} ${productName}`}
+        className={`min-h-10 rounded border px-3 py-2 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-primary disabled:opacity-50 ${
           isActive ? 'border-amber-300 text-amber-600 hover:bg-amber-50' : 'border-green-300 text-green-600 hover:bg-green-50'
         }`}>
         {loading ? '...' : isActive ? 'Hide' : 'Show'}

@@ -109,13 +109,14 @@ export default async function AdminCustomersPage() {
       <div className="mx-auto max-w-7xl">
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
-            <h1 className="font-serif text-3xl text-navy-dark">Customers</h1>
+            <h1 className="font-serif text-2xl text-navy-dark sm:text-3xl">Customers</h1>
             <p className="mt-1 text-sm text-green-secondary">
               {customerRows.length.toLocaleString('en-IN')} registered {customerRows.length === 1 ? 'user' : 'users'}
             </p>
           </div>
           <Link
             href="/admin"
+            aria-label="Back to dashboard"
             className="inline-flex shrink-0 items-center gap-1 rounded-md px-3 py-2 text-sm text-green-800 hover:bg-green-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-primary focus-visible:ring-offset-2"
           >
             <ArrowLeft aria-hidden="true" size={15} />

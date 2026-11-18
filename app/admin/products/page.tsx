@@ -26,33 +26,33 @@ export default async function AdminProductsPage() {
   }>
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="min-w-0 p-4 sm:p-6 lg:p-8">
+      <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-serif text-3xl text-navy-dark mb-1">Products</h1>
+          <h1 className="mb-1 font-serif text-2xl text-navy-dark sm:text-3xl">Products</h1>
           <p className="text-green-secondary text-sm">{products.length} products total</p>
         </div>
-        <Link href="/admin/products/new" className="btn-primary">
+        <Link href="/admin/products/new" className="btn-primary w-full justify-center sm:w-auto">
           <Plus size={16} /> Add Product
         </Link>
       </div>
 
       {products.length === 0 ? (
-        <div className="bg-white border border-silver p-16 text-center">
-          <Package size={48} className="text-silver mx-auto mb-4" />
+        <div className="rounded-xl border border-silver bg-white px-5 py-10 text-center sm:p-16">
+          <Package size={40} className="mx-auto mb-4 text-silver sm:h-12 sm:w-12" />
           <p className="text-navy-dark font-medium mb-2">No products yet</p>
           <Link href="/admin/products/new" className="btn-primary inline-flex">
             <Plus size={16} /> Add First Product
           </Link>
         </div>
       ) : (
-        <div className="bg-white border border-silver">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+        <div className="overflow-hidden rounded-xl border border-silver bg-white shadow-sm">
+          <div className="hidden overflow-x-auto xl:block">
+            <table className="w-full min-w-[920px] text-sm">
               <thead className="bg-light-bg border-b border-silver">
                 <tr>
-                  {['Image', 'Product', 'Price', 'Stock', 'Status', 'Actions'].map(h => (
-                    <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-green-secondary uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  {['Image', 'Product', 'Price', 'Stock', 'Status', 'Actions'].map((heading) => (
+                    <th key={heading} scope="col" className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-green-secondary">{heading}</th>
                   ))}
                 </tr>
               </thead>
@@ -81,7 +81,7 @@ export default async function AdminProductsPage() {
                       {/* Name */}
                       <td className="px-4 py-3">
                         <p className="font-medium text-navy-dark">{product.name}</p>
-                        <p className="text-[11px] text-green-secondary font-mono">{product.slug}</p>
+                        <p className="font-mono text-[11px] text-green-secondary">{product.slug}</p>
                       </td>
 
                       {/* Price */}
@@ -112,11 +112,11 @@ export default async function AdminProductsPage() {
                         <div className="flex items-center gap-2">
                           <Link
                             href={`/admin/products/${product.id}`}
-                            className="inline-flex items-center gap-1 text-xs text-green-primary hover:underline"
+                            className="inline-flex min-h-10 items-center gap-1 rounded px-2 text-xs text-green-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-primary"
                           >
                             <Edit size={12} /> Edit
                           </Link>
-                          <ToggleActiveButton productId={product.id} isActive={product.is_active} />
+                          <ToggleActiveButton productId={product.id} productName={product.name} isActive={product.is_active} />
                           <DeleteProductButton productId={product.id} productName={product.name} />
                         </div>
                       </td>
@@ -125,6 +125,68 @@ export default async function AdminProductsPage() {
                 })}
               </tbody>
             </table>
+          </div>
+
+          <div className="divide-y divide-[#E8EEF0] xl:hidden">
+            {products.map((product) => {
+              const primaryImage = product.product_images?.find((image) => image.is_primary) ?? product.product_images?.[0]
+              const variant = product.product_variants?.[0]
+              const price = variant?.price ?? 0
+              const stock = variant?.stock ?? 0
+
+              return (
+                <article key={product.id} className="min-w-0 p-4 sm:p-5">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <div className="relative h-16 w-16 shrink-0 bg-light-bg">
+                      {primaryImage ? (
+                        <Image src={primaryImage.url} alt={primaryImage.alt ?? product.name} fill sizes="64px" className="object-cover" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center">
+                          <Package size={20} className="text-silver" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h2 className="break-words font-medium text-navy-dark">{product.name}</h2>
+                      <p className="mt-0.5 break-all font-mono text-[11px] text-green-secondary">{product.slug}</p>
+                      <div className="mt-2 flex items-center gap-1.5">
+                        {product.is_active
+                          ? <><CheckCircle size={14} className="shrink-0 text-green-500" /><span className="text-xs text-green-600">Active</span></>
+                          : <><XCircle size={14} className="shrink-0 text-gray-400" /><span className="text-xs text-gray-500">Hidden</span></>}
+                      </div>
+                    </div>
+                  </div>
+
+                  <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-[#E8EEF0] pt-3 text-sm">
+                    <div className="min-w-0">
+                      <dt className="text-xs text-gray-600">Price</dt>
+                      <dd className="mt-0.5 font-medium text-navy-dark">
+                        {price === 0
+                          ? <span className="text-xs text-gold-accent">Coming Soon</span>
+                          : formatPrice(price)}
+                      </dd>
+                    </div>
+                    <div className="min-w-0">
+                      <dt className="text-xs text-gray-600">Stock</dt>
+                      <dd className={`mt-0.5 text-xs font-medium ${stock > 10 ? 'text-green-600' : stock > 0 ? 'text-amber-600' : 'text-red-500'}`}>
+                        {stock === 0 ? 'Out of stock' : `${stock} units`}
+                      </dd>
+                    </div>
+                  </dl>
+
+                  <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[#E8EEF0] pt-3">
+                    <Link
+                      href={`/admin/products/${product.id}`}
+                      className="inline-flex min-h-10 items-center gap-1.5 rounded border border-silver px-3 text-xs font-medium text-green-primary hover:bg-light-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-primary"
+                    >
+                      <Edit size={14} /> Edit
+                    </Link>
+                    <ToggleActiveButton productId={product.id} productName={product.name} isActive={product.is_active} />
+                    <DeleteProductButton productId={product.id} productName={product.name} />
+                  </div>
+                </article>
+              )
+            })}
           </div>
         </div>
       )}

@@ -199,7 +199,7 @@ export default function CustomerDetailsDialog({
         aria-modal="true"
         aria-labelledby="customer-details-title"
         tabIndex={-1}
-        className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-silver bg-light-bg shadow-2xl focus:outline-none"
+        className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-silver bg-light-bg shadow-2xl focus:outline-none sm:max-h-[90vh]"
       >
         <header className="flex items-start justify-between gap-4 border-b border-silver bg-white px-5 py-4 sm:px-7">
           <div>
@@ -303,7 +303,7 @@ export default function CustomerDetailsDialog({
                             </span>
                           )}
                         </div>
-                        <p className="mt-2 text-green-secondary">
+                        <p className="mt-2 break-words text-green-secondary">
                           {[address.line1, address.line2, address.city, address.state, address.pincode]
                             .filter(Boolean)
                             .join(', ')}
@@ -353,8 +353,8 @@ export default function CustomerDetailsDialog({
                         {order.items.length > 0 && (
                           <ul className="mt-3 space-y-1 border-t border-[#E8EEF0] pt-3 text-sm text-green-secondary">
                             {order.items.map((item, index) => (
-                              <li key={`${order.id}-${index}`} className="flex justify-between gap-3">
-                                <span>{item.variant_name} × {item.quantity}</span>
+                              <li key={`${order.id}-${index}`} className="flex items-start justify-between gap-3">
+                                <span className="min-w-0 break-words">{item.variant_name} × {item.quantity}</span>
                                 <span className="shrink-0 tabular-nums">{formatPrice(item.total_price)}</span>
                               </li>
                             ))}
@@ -363,7 +363,7 @@ export default function CustomerDetailsDialog({
                         {getAddressLines(order.shipping_address).length > 0 && (
                           <p className="mt-3 flex items-start gap-2 border-t border-[#E8EEF0] pt-3 text-xs text-gray-600">
                             <MapPin size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
-                            <span>{getAddressLines(order.shipping_address).join(', ')}</span>
+                            <span className="min-w-0 break-words">{getAddressLines(order.shipping_address).join(', ')}</span>
                           </p>
                         )}
                       </article>

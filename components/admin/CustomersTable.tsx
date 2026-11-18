@@ -183,7 +183,7 @@ export default function CustomersTable({ customers }: { customers: CustomerRow[]
           value={role}
           onChange={(event) => setRole(event.target.value as RoleFilter)}
           aria-label="Filter customers by role"
-          className="h-11 rounded-lg border border-silver bg-white px-3 text-sm text-navy-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-primary focus-visible:ring-offset-1 sm:w-44"
+          className="h-11 w-full rounded-lg border border-silver bg-white px-3 text-sm text-navy-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-primary focus-visible:ring-offset-1 sm:w-44"
         >
           <option value="all">All roles</option>
           <option value="admin">Admin</option>
@@ -300,7 +300,7 @@ export default function CustomersTable({ customers }: { customers: CustomerRow[]
               {sortedCustomers.map((customer) => {
                 const joined = formatJoinedDate(customer.created_at)
                 return (
-                  <article key={customer.id} className="p-4">
+                  <article key={customer.id} className="min-w-0 p-4">
                     <button
                       type="button"
                       onClick={() => setSelectedCustomerId(customer.id)}
