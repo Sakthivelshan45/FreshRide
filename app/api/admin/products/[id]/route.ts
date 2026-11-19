@@ -181,6 +181,12 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const { error } = await supabaseAdmin.from('products').delete().eq('id', parsedId.data)
   if (error) {
     console.error('Product delete failed:', error)
+    if (error.code === '23503') {
+      return NextResponse.json(
+        { error: 'This product is linked to existing orders. Apply the latest Supabase migration and try again.' },
+        { status: 409 }
+      )
+    }
     return NextResponse.json({ error: 'Could not delete product.' }, { status: 500 })
   }
 
