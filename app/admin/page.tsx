@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { formatPrice } from '@/lib/utils/helpers'
 import { Package, ShoppingBag, MessageSquare, TrendingUp, CheckCircle, AlertCircle } from 'lucide-react'
+import AdminDashboardRealtime from '@/components/admin/AdminDashboardRealtime'
 
 export const metadata: Metadata = { title: 'Admin Dashboard | Butterfly Fresh Ride' }
 export const dynamic = 'force-dynamic'
@@ -112,6 +113,7 @@ export default async function AdminDashboard() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
+      <AdminDashboardRealtime />
       <div className="mb-6 sm:mb-8">
         <h1 className="font-serif text-2xl sm:text-3xl text-navy-dark mb-1">Dashboard</h1>
           <p className="text-green-secondary text-sm">

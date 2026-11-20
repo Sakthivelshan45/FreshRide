@@ -1,9 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { ArrowDown, ArrowUp, Search, Users } from 'lucide-react'
 import CustomerDetailsDialog from '@/components/admin/CustomerDetailsDialog'
+import { useRealtimeTable, type AdminRealtimeChange, type AdminRealtimeListener } from '@/lib/hooks/useRealtimeTable'
+import { useInitialRows } from '@/lib/hooks/useInitialRows'
 
 export type CustomerRow = {
   id: string
@@ -119,16 +122,114 @@ function SortHeader({
 }
 
 export default function CustomersTable({ customers }: { customers: CustomerRow[] }) {
+  const router = useRouter()
+  const [customerRows, setCustomerRows] = useInitialRows(customers)
   const [search, setSearch] = useState('')
   const [role, setRole] = useState<RoleFilter>('all')
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null)
+  const [detailsRefreshKey, setDetailsRefreshKey] = useState(0)
   const [sort, setSort] = useState<{ key: SortKey; direction: SortDirection }>({
     key: 'joined',
     direction: 'desc',
   })
 
+  const refreshCustomer = useCallback(async (customerId: string) => {
+    const response = await fetch(`/api/admin/customers/${customerId}`, { cache: 'no-store' })
+    const result = await response.json() as {
+      customer?: Omit<CustomerRow, 'orders'>
+      order_count?: number
+      error?: string
+    }
+
+    if (response.status === 404) {
+      setCustomerRows((current) => current.filter((customer) => customer.id !== customerId))
+      return
+    }
+    if (!response.ok || !result.customer) {
+      throw new Error(result.error || 'Could not refresh customer details.')
+    }
+
+    const refreshedCustomer: CustomerRow = {
+      ...result.customer,
+      orders: result.order_count ?? 0,
+    }
+    setCustomerRows((current) => {
+      const existingIndex = current.findIndex((customer) => customer.id === customerId)
+      if (existingIndex < 0) return [refreshedCustomer, ...current]
+      const next = [...current]
+      next[existingIndex] = refreshedCustomer
+      return next
+    })
+    if (selectedCustomerId === customerId) {
+      setDetailsRefreshKey((current) => current + 1)
+    }
+  }, [selectedCustomerId, setCustomerRows])
+
+  const handleProfileChange = useCallback(async (change: AdminRealtimeChange) => {
+    const id = change.event === 'DELETE' ? change.oldRecord?.id : change.record?.id
+    if (typeof id !== 'string') {
+      console.error('Realtime profile event did not include a profile ID:', change)
+      return
+    }
+
+    if (change.event === 'DELETE') {
+      setCustomerRows((current) => current.filter((customer) => customer.id !== id))
+      if (selectedCustomerId === id) setSelectedCustomerId(null)
+      return
+    }
+
+    await refreshCustomer(id)
+  }, [refreshCustomer, selectedCustomerId, setCustomerRows])
+
+  const handleOrderChange = useCallback(async (change: AdminRealtimeChange) => {
+    const record = change.event === 'DELETE' ? change.oldRecord : change.record
+    const userId = record?.user_id
+    if (typeof userId === 'string') await refreshCustomer(userId)
+  }, [refreshCustomer])
+
+  const refetchCustomers = useCallback(() => {
+    router.refresh()
+  }, [router])
+
+  const listeners = useMemo<AdminRealtimeListener[]>(() => [
+    {
+      id: 'profile-row-changes',
+      source: 'postgres_changes',
+      table: 'profiles',
+      events: ['INSERT', 'UPDATE'],
+      onChange: handleProfileChange,
+    },
+    {
+      id: 'profile-deletes',
+      source: 'broadcast',
+      table: 'profiles',
+      events: ['DELETE'],
+      onChange: handleProfileChange,
+    },
+    {
+      id: 'customer-order-changes',
+      source: 'postgres_changes',
+      table: 'orders',
+      events: ['INSERT', 'UPDATE'],
+      onChange: handleOrderChange,
+    },
+    {
+      id: 'customer-order-deletes',
+      source: 'broadcast',
+      table: 'orders',
+      events: ['DELETE'],
+      onChange: handleOrderChange,
+    },
+  ], [handleOrderChange, handleProfileChange])
+
+  useRealtimeTable({
+    channelName: 'admin:customers',
+    listeners,
+    onConnectionError: refetchCustomers,
+  })
+
   const searchTerm = search.trim().toLocaleLowerCase('en-IN')
-  const filteredCustomers = customers.filter((customer) => {
+  const filteredCustomers = customerRows.filter((customer) => {
     const matchesRole =
       role === 'all' || (role === 'admin' ? customer.is_admin : !customer.is_admin)
     const matchesSearch =
@@ -194,7 +295,7 @@ export default function CustomersTable({ customers }: { customers: CustomerRow[]
       <div className="overflow-hidden rounded-xl border border-silver bg-white shadow-sm">
         {sortedCustomers.length === 0 ? (
           <div className="flex min-h-64 flex-col items-center justify-center px-6 py-12 text-center">
-            {customers.length === 0 ? (
+            {customerRows.length === 0 ? (
               <>
                 <Users aria-hidden="true" size={28} className="mb-3 text-green-secondary" />
                 <h2 className="font-medium text-navy-dark">No customers yet</h2>
@@ -347,12 +448,13 @@ export default function CustomersTable({ customers }: { customers: CustomerRow[]
 
         <footer className="border-t border-[#E8EEF0] px-4 py-3 text-xs text-green-secondary sm:px-6">
           Showing <span className="font-medium tabular-nums text-navy-dark">{sortedCustomers.length}</span> of{' '}
-          <span className="font-medium tabular-nums text-navy-dark">{customers.length}</span> customers
+          <span className="font-medium tabular-nums text-navy-dark">{customerRows.length}</span> customers
         </footer>
       </div>
       {selectedCustomerId && (
         <CustomerDetailsDialog
           customerId={selectedCustomerId}
+          refreshKey={detailsRefreshKey}
           onClose={() => setSelectedCustomerId(null)}
         />
       )}

@@ -100,14 +100,23 @@ function getAddressLines(address: Json) {
 
 export default function CustomerDetailsDialog({
   customerId,
+  refreshKey,
   onClose,
 }: {
   customerId: string
+  refreshKey: number
   onClose: () => void
 }) {
-  const [details, setDetails] = useState<CustomerDetails | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const requestKey = `${customerId}:${refreshKey}`
+  const [requestState, setRequestState] = useState<{
+    key: string
+    details: CustomerDetails | null
+    error: string | null
+  }>({ key: '', details: null, error: null })
+  const currentRequest = requestState.key === requestKey ? requestState : null
+  const details = currentRequest?.details ?? null
+  const loading = currentRequest === null
+  const error = currentRequest?.error ?? null
   const dialogRef = useRef<HTMLElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const onCloseRef = useRef(onClose)
@@ -156,9 +165,6 @@ export default function CustomerDetailsDialog({
 
   useEffect(() => {
     const controller = new AbortController()
-    setDetails(null)
-    setError(null)
-    setLoading(true)
 
     async function loadDetails() {
       try {
@@ -168,19 +174,21 @@ export default function CustomerDetailsDialog({
         })
         const result = await response.json() as CustomerDetails & { error?: string }
         if (!response.ok) throw new Error(result.error || 'Could not load customer details.')
-        setDetails(result)
+        setRequestState({ key: requestKey, details: result, error: null })
       } catch (loadError) {
         if (loadError instanceof Error && loadError.name === 'AbortError') return
         console.error('Customer details request failed:', loadError)
-        setError(loadError instanceof Error ? loadError.message : 'Could not load customer details.')
-      } finally {
-        if (!controller.signal.aborted) setLoading(false)
+        setRequestState({
+          key: requestKey,
+          details: null,
+          error: loadError instanceof Error ? loadError.message : 'Could not load customer details.',
+        })
       }
     }
 
     loadDetails()
     return () => controller.abort()
-  }, [customerId])
+  }, [customerId, refreshKey, requestKey])
 
   const customer = details?.customer
   const displayName = customer?.full_name || customer?.email || 'Customer'
