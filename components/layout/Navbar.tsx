@@ -123,6 +123,7 @@ export default function Navbar() {
                 src="/images/logo.png"
                 alt="Butterfly Fresh Ride Logo"
                 fill
+                sizes="40px"
                 className="object-contain"
                 priority
               />
@@ -234,7 +235,7 @@ export default function Navbar() {
             <div className="p-6 border-b border-silver flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <div className="relative w-8 h-8">
-                  <Image src="/images/logo.png" alt="Logo" fill className="object-contain" />
+                  <Image src="/images/logo.png" alt="Logo" fill sizes="32px" className="object-contain" />
                 </div>
                 <span className="font-bold text-green-primary">BUTTERFLY</span>
               </div>

@@ -34,7 +34,7 @@ export default function Footer() {
         <div className="lg:col-span-1">
           <div className="flex items-center gap-3 mb-5">
             <div className="relative w-10 h-10">
-              <Image src="/images/logo.png" alt="Butterfly Fresh Ride" fill className="object-contain" />
+              <Image src="/images/logo.png" alt="Butterfly Fresh Ride" fill sizes="40px" className="object-contain" />
             </div>
             <div>
               <p className="text-sm font-bold tracking-widest">BUTTERFLY</p>

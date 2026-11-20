@@ -115,8 +115,8 @@ export default function ShopClient({ variants, productId, productName, productIm
                   src={productImage}
                   alt={`${productName} — ${variant.name}`}
                   fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-500"
                   sizes="(max-width: 640px) 100vw, 25vw"
+                  className="object-cover group-hover:scale-105 transition-transform duration-500"
                 />
                 {discount > 0 && (
                   <div className="absolute top-3 left-3 bg-gold-accent text-white text-[10px] font-bold px-2.5 py-1">

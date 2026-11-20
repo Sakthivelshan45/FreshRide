@@ -115,13 +115,13 @@ export default function B2BSection() {
             {/* Hero image */}
             <div className="relative aspect-video overflow-hidden">
               <Image
-                src="/images/lifestyle/b2b_fleet.png"
+                src="/images/lifestyle/b2b.png"
                 alt="Professional bus fleet ready for Butterfly Fresh Ride bulk supply"
                 fill
-                className="object-cover"
                 sizes="(max-width: 1024px) 100vw, 50vw"
+                className="object-cover"
               />
-              <div className="absolute inset-0 bg-green-primary/30" />
+              <div className="absolute inset-0 bg-green-primary/10" />
             </div>
           </motion.div>
 

@@ -17,7 +17,7 @@ const steps = [
     icon: Expand,
     title: 'Unfold the Bedsheet',
     desc: 'Shake open the bedsheet and spread it evenly over your sleeping berth or mattress.',
-    image: '/images/lifestyle/hero_sleeper_berth.png',
+    image: '/images/lifestyle/unfold.png',
   },
   {
     step: '03',
@@ -31,7 +31,7 @@ const steps = [
     icon: CheckCircle,
     title: 'Rest Comfortably',
     desc: 'Wrap yourself in the blanket and enjoy a comfortable, hygienic night of rest.',
-    image: '/images/lifestyle/hero_sleeper_berth.png',
+    image: '/images/lifestyle/rest.png',
   },
   {
     step: '05',
@@ -107,8 +107,8 @@ export default function HowToUseSection() {
                       src={step.image}
                       alt={step.title}
                       fill
-                      className="object-cover opacity-80"
                       sizes="(max-width: 1024px) 100vw, 50vw"
+                      className="object-cover opacity-80"
                     />
                     {/* Step number overlay */}
                     {/* <div className="absolute top-4 right-4 font-serif text-6xl font-bold text-white/10">

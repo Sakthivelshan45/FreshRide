@@ -28,7 +28,7 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-md bg-white border border-silver shadow-sm">
         <div className="bg-green-primary p-8 text-center">
           <div className="relative w-12 h-12 mx-auto mb-3">
-            <Image src="/images/logo.png" alt="Butterfly Fresh Ride" fill className="object-contain" />
+            <Image src="/images/logo.png" alt="Butterfly Fresh Ride" fill sizes="48px" className="object-contain" />
           </div>
           <h1 className="font-serif text-2xl text-white">Reset Password</h1>
         </div>

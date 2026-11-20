@@ -34,8 +34,8 @@ function ProductCard({ product }: { product: Product }) {
             src={primaryImage.url}
             alt={primaryImage.alt ?? product.name}
             fill
-            className="object-cover group-hover:scale-105 transition-transform duration-500"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+            className="object-cover group-hover:scale-105 transition-transform duration-500"
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center bg-light-bg">

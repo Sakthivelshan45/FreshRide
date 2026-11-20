@@ -22,7 +22,7 @@ const useCases = [
     id: 'hospitals',
     title: 'Hospitals & Clinics',
     description: 'Clean, single-use bedding for patient examination and overnight stays.',
-    image: '/images/lifestyle/b2b_fleet.png',
+    image: '/images/lifestyle/hospital.png',
     gradient: 'from-[#0D2018]/80 to-[#17232D]/20',
   },
   {
@@ -36,14 +36,14 @@ const useCases = [
     id: 'wellness',
     title: 'Spas & Wellness',
     description: 'Hygienic treatment table covers for massage and wellness centres.',
-    image: '/images/lifestyle/hotel_room.png',
+    image: '/images/lifestyle/spa1.png',
     gradient: 'from-[#17232D]/80 to-[#1A4731]/20',
   },
   {
     id: 'home',
     title: 'Home Use',
     description: 'Perfect for guest rooms, camping trips and travel away from home.',
-    image: '/images/lifestyle/sleeper_bus.png',
+    image: '/images/lifestyle/home.png',
     gradient: 'from-[#0D2018]/80 to-[#4A7C59]/20',
   },
 ]
@@ -91,8 +91,8 @@ export default function UseCasesSection() {
                 src={item.image}
                 alt={item.title}
                 fill
-                className="object-cover group-hover:scale-105 transition-transform duration-700"
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                className="object-cover group-hover:scale-105 transition-transform duration-700"
               />
 
               {/* Gradient overlay */}

@@ -43,7 +43,7 @@ export default function AdminSidebar() {
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-navy-dark flex items-center justify-between px-4 py-3 border-b border-[#2A3A47]">
         <div className="flex items-center gap-3">
           <div className="relative w-7 h-7 flex-shrink-0">
-            <Image src="/images/logo.png" alt="Logo" fill className="object-contain" />
+            <Image src="/images/logo.png" alt="Logo" fill sizes="28px" className="object-contain" />
           </div>
           <div>
             <p className="text-white text-xs font-bold tracking-widest">BUTTERFLY</p>
@@ -78,7 +78,7 @@ export default function AdminSidebar() {
         <div className="p-5 border-b border-[#2A3A47] flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative w-8 h-8 flex-shrink-0">
-              <Image src="/images/logo.png" alt="Logo" fill className="object-contain" />
+              <Image src="/images/logo.png" alt="Logo" fill sizes="32px" className="object-contain" />
             </div>
             <div>
               <p className="text-white text-xs font-bold tracking-widest">BUTTERFLY</p>

@@ -219,7 +219,7 @@ export default function CheckoutPage() {
                     {items.map((item) => (
                       <div key={item.variantId} className="flex gap-3">
                         <div className="relative w-12 h-12 flex-shrink-0 bg-light-bg">
-                          <Image src={item.image} alt={item.name} fill className="object-cover" />
+                          <Image src={item.image} alt={item.name} fill sizes="64px" className="object-cover" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium text-navy-dark truncate">{item.variantName}</p>

@@ -125,8 +125,8 @@ export default function ProductPackages({ variants, productId, productName, prod
                       src={productImage}
                       alt={`${productName} — ${variant.name}`}
                       fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-500"
                       sizes="(max-width: 640px) 100vw, 25vw"
+                      className="object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                   </div>
 

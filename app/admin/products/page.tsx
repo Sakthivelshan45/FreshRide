@@ -69,7 +69,7 @@ export default async function AdminProductsPage() {
                       <td className="px-4 py-3">
                         <div className="relative w-12 h-12 bg-light-bg flex-shrink-0">
                           {primaryImage ? (
-                            <Image src={primaryImage.url} alt={primaryImage.alt ?? product.name} fill className="object-cover" />
+                            <Image src={primaryImage.url} alt={primaryImage.alt ?? product.name} fill sizes="48px" className="object-cover" />
                           ) : (
                             <div className="w-12 h-12 bg-light-bg flex items-center justify-center">
                               <Package size={16} className="text-silver" />

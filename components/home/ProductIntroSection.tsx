@@ -23,8 +23,8 @@ export default function ProductIntroSection() {
                 src="/images/products/three_piece_kit.png"
                 alt="Butterfly Fresh Ride 3-piece disposable travel bedding kit — bedsheet, pillow cover and blanket"
                 fill
-                className="object-cover"
                 sizes="(max-width: 1024px) 100vw, 50vw"
+                className="object-cover"
               />
             </div>
             {/* Floating badge */}

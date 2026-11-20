@@ -82,7 +82,7 @@ export default function CartPage() {
                   transition={{ delay: i * 0.05 }}
                 >
                   <div className="relative w-20 h-20 flex-shrink-0 bg-light-bg">
-                    <Image src={item.image} alt={item.name} fill className="object-cover" />
+                    <Image src={item.image} alt={item.name} fill sizes="80px" className="object-cover" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-navy-dark text-sm">{item.name}</p>
