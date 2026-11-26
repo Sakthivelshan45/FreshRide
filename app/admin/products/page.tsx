@@ -10,6 +10,26 @@ import ToggleActiveButton from '@/components/admin/ToggleActiveButton'
 export const metadata: Metadata = { title: 'Products | Admin' }
 export const dynamic = 'force-dynamic'
 
+function getProductImageSrc(value: string | null | undefined): string | null {
+  const src = value?.trim()
+  if (!src || src.startsWith('//')) return null
+  if (src.startsWith('/')) return src
+
+  try {
+    const url = new URL(src)
+    if (
+      url.protocol === 'https:' &&
+      (url.hostname.endsWith('.supabase.co') || url.hostname === 'res.cloudinary.com')
+    ) {
+      return src
+    }
+    return null
+  } catch {
+    if (/^[a-z][a-z\d+.-]*:/i.test(src)) return null
+    return `/${encodeURI(src.replace(/^\.?\//, ''))}`
+  }
+}
+
 export default async function AdminProductsPage() {
   const supabase = await createClient()
 
@@ -59,6 +79,7 @@ export default async function AdminProductsPage() {
               <tbody className="divide-y divide-[#E8EEF0]">
                 {products.map((product) => {
                   const primaryImage = product.product_images?.find(i => i.is_primary) ?? product.product_images?.[0]
+                  const imageSrc = getProductImageSrc(primaryImage?.url)
                   const variant = product.product_variants?.[0]
                   const price = variant?.price ?? 0
                   const stock = variant?.stock ?? 0
@@ -68,8 +89,8 @@ export default async function AdminProductsPage() {
                       {/* Image */}
                       <td className="px-4 py-3">
                         <div className="relative w-12 h-12 bg-light-bg flex-shrink-0">
-                          {primaryImage ? (
-                            <Image src={primaryImage.url} alt={primaryImage.alt ?? product.name} fill sizes="48px" className="object-cover" />
+                          {imageSrc ? (
+                            <Image src={imageSrc} alt={primaryImage?.alt ?? product.name} fill sizes="48px" className="object-cover" />
                           ) : (
                             <div className="w-12 h-12 bg-light-bg flex items-center justify-center">
                               <Package size={16} className="text-silver" />
@@ -130,6 +151,7 @@ export default async function AdminProductsPage() {
           <div className="divide-y divide-[#E8EEF0] xl:hidden">
             {products.map((product) => {
               const primaryImage = product.product_images?.find((image) => image.is_primary) ?? product.product_images?.[0]
+              const imageSrc = getProductImageSrc(primaryImage?.url)
               const variant = product.product_variants?.[0]
               const price = variant?.price ?? 0
               const stock = variant?.stock ?? 0
@@ -138,8 +160,8 @@ export default async function AdminProductsPage() {
                 <article key={product.id} className="min-w-0 p-4 sm:p-5">
                   <div className="flex min-w-0 items-start gap-3">
                     <div className="relative h-16 w-16 shrink-0 bg-light-bg">
-                      {primaryImage ? (
-                        <Image src={primaryImage.url} alt={primaryImage.alt ?? product.name} fill sizes="64px" className="object-cover" />
+                      {imageSrc ? (
+                        <Image src={imageSrc} alt={primaryImage?.alt ?? product.name} fill sizes="64px" className="object-cover" />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center">
                           <Package size={20} className="text-silver" />

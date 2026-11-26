@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { formatPrice } from '@/lib/utils/helpers'
 import { ShoppingBag, Package } from 'lucide-react'
 import type { Database } from '@/types/database'
+import CancelOrderButton from '@/components/account/CancelOrderButton'
 
 export const metadata: Metadata = { title: 'My Orders | Butterfly Fresh Ride' }
 
@@ -95,6 +96,14 @@ export default async function MyOrdersPage() {
                   {order.tracking_number && (
                     <p className="text-xs text-green-secondary">Tracking: <span className="font-mono text-navy-dark">{order.tracking_number}</span></p>
                   )}
+                  <CancelOrderButton
+                    orderId={order.id}
+                    orderNumber={order.order_number}
+                    canCancel={
+                      ['pending', 'confirmed', 'processing'].includes(order.fulfillment_status) &&
+                      (order.payment_method === 'cod' || order.status === 'paid')
+                    }
+                  />
                 </div>
               </div>
             ))}

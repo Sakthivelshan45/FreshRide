@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     const supabaseAdmin = createAdminClient()
     const { data: order, error: orderError } = await supabaseAdmin
       .from('orders')
-      .select('id, amount, currency, status, razorpay_payment_id')
+      .select('id, amount, currency, status, fulfillment_status, razorpay_payment_id')
       .eq('razorpay_order_id', payment.order_id)
       .maybeSingle()
 
@@ -79,6 +79,10 @@ export async function POST(request: NextRequest) {
     }
 
     if (event.event === 'payment.captured') {
+      if (order.fulfillment_status === 'cancelled' && order.status === 'paid') {
+        return NextResponse.json({ status: 'ok' })
+      }
+
       if (order.status === 'paid' && order.razorpay_payment_id !== payment.id) {
         return NextResponse.json({ error: 'Order is already paid by a different payment.' }, { status: 409 })
       }
@@ -119,6 +123,7 @@ export async function POST(request: NextRequest) {
         .update({ razorpay_payment_id: payment.id, status: 'paid' })
         .eq('order_id', order.id)
         .eq('razorpay_order_id', payment.order_id)
+        .neq('status', 'refunded')
 
       if (paymentUpdateError) throw paymentUpdateError
     } else if (order.status === 'created') {

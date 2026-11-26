@@ -20,7 +20,12 @@ const FALLBACK_VARIANTS = [
 type ShopProduct = {
   id: string
   name: string
-  product_variants: Array<(typeof FALLBACK_VARIANTS)[number]>
+  product_variants: Array<
+    (typeof FALLBACK_VARIANTS)[number] & {
+      image_url?: string | null
+      hover_image_url?: string | null
+    }
+  >
   product_images: Array<{ url: string; is_primary: boolean }>
 }
 

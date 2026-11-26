@@ -16,6 +16,8 @@ interface Variant {
   stock: number
   is_active: boolean
   sort_order: number
+  image_url?: string | null
+  hover_image_url?: string | null
 }
 
 interface ProductPackagesProps {
@@ -37,7 +39,7 @@ export default function ProductPackages({ variants, productId, productName, prod
       variantName: variant.name,
       price: variant.price,
       comparePrice: variant.compare_price,
-      image: productImage,
+      image: variant.image_url || productImage,
       packQuantity: variant.pack_quantity,
       stock: variant.stock,
     })
@@ -87,7 +89,7 @@ export default function ProductPackages({ variants, productId, productName, prod
             <p>Products are being configured. Please check back shortly.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 gap-3 sm:gap-6 xl:grid-cols-4">
             {variants.map((variant, i) => {
               const discount = calculateDiscount(variant.price, variant.compare_price)
               const isBestValue = i === 2 // Third pack marked as best value
@@ -120,26 +122,39 @@ export default function ProductPackages({ variants, productId, productName, prod
                   )}
 
                   {/* Image */}
-                  <div className="relative aspect-square bg-light-bg overflow-hidden">
+                  <div className="relative aspect-[4/5] bg-light-bg overflow-hidden">
                     <Image
-                      src={productImage}
+                      src={variant.image_url || productImage}
                       alt={`${productName} — ${variant.name}`}
                       fill
                       sizes="(max-width: 640px) 100vw, 25vw"
-                      className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      className={`object-cover transition-all duration-500 ${
+                        variant.hover_image_url
+                          ? 'group-hover:scale-105 group-hover:opacity-0'
+                          : 'group-hover:scale-105'
+                      }`}
                     />
+                    {variant.hover_image_url && (
+                      <Image
+                        src={variant.hover_image_url}
+                        alt=""
+                        fill
+                        sizes="(max-width: 640px) 100vw, 25vw"
+                        className="absolute inset-0 object-cover opacity-0 scale-105 transition-all duration-500 group-hover:opacity-100 group-hover:scale-100"
+                      />
+                    )}
                   </div>
 
                   {/* Content */}
-                  <div className="p-6 flex flex-col flex-1">
-                    <h3 className="font-serif text-xl text-navy-dark mb-1">{variant.name}</h3>
-                    <p className="text-green-secondary text-sm mb-4">
+                  <div className="p-3 sm:p-6 flex flex-col flex-1">
+                    <h3 className="font-serif text-base sm:text-xl text-navy-dark mb-1">{variant.name}</h3>
+                    <p className="text-green-secondary text-xs sm:text-sm mb-4">
                       {variant.pack_quantity} kit{variant.pack_quantity > 1 ? 's' : ''} — bedsheet + pillow cover + blanket
                     </p>
 
                     {/* Price */}
                     <div className="mb-5 flex items-baseline gap-2">
-                      <span className="text-2xl font-bold text-navy-dark">
+                      <span className="text-xl sm:text-2xl font-bold text-navy-dark">
                         {formatPrice(variant.price)}
                       </span>
                       {variant.compare_price && variant.compare_price > variant.price && (

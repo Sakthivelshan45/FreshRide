@@ -21,10 +21,10 @@ export const metadata: Metadata = {
 }
 
 const FALLBACK_VARIANTS = [
-  { id: 'v1', name: 'Single Kit', price: 149, compare_price: null, pack_quantity: 1, stock: 100, is_active: true, sort_order: 1 },
-  { id: 'v2', name: 'Pack of 5', price: 649, compare_price: 745, pack_quantity: 5, stock: 80, is_active: true, sort_order: 2 },
-  { id: 'v3', name: 'Pack of 10', price: 1199, compare_price: 1490, pack_quantity: 10, stock: 60, is_active: true, sort_order: 3 },
-  { id: 'v4', name: 'Bulk Pack (25)', price: 2749, compare_price: 3725, pack_quantity: 25, stock: 40, is_active: true, sort_order: 4 },
+  { id: 'v1', name: 'Single Kit', price: 149, compare_price: null, pack_quantity: 1, stock: 100, is_active: true, sort_order: 1, image_url: null, hover_image_url: null },
+  { id: 'v2', name: 'Pack of 5', price: 649, compare_price: 745, pack_quantity: 5, stock: 80, is_active: true, sort_order: 2, image_url: null, hover_image_url: null },
+  { id: 'v3', name: 'Pack of 10', price: 1199, compare_price: 1490, pack_quantity: 10, stock: 60, is_active: true, sort_order: 3, image_url: null, hover_image_url: null },
+  { id: 'v4', name: 'Bulk Pack (25)', price: 2749, compare_price: 3725, pack_quantity: 25, stock: 40, is_active: true, sort_order: 4, image_url: null, hover_image_url: null },
 ]
 
 const FALLBACK_FAQS = [
@@ -60,7 +60,7 @@ export default async function HomePage() {
   }[] = FALLBACK_TESTIMONIALS
   let productId = 'fresh-ride-kit'
   let productName = 'Butterfly Fresh Ride Disposable Travel Bedding Kit'
-  let productImage = '/images/products/three_piece_kit.png'
+  let productImage = '/images/products/fresh_ride (22).png'
 
   try {
     const supabase = await createClient()
@@ -69,7 +69,7 @@ export default async function HomePage() {
       .from('products')
       .select(`
         id, name,
-        product_variants(id, name, price, compare_price, pack_quantity, stock, is_active, sort_order),
+        product_variants(id, name, price, compare_price, pack_quantity, stock, is_active, sort_order, image_url, hover_image_url),
         product_images(url, is_primary)
       `)
       .eq('slug', 'fresh-ride-kit')

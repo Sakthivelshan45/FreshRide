@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     const supabaseAdmin = createAdminClient()
     const { data: order, error: orderError } = await supabaseAdmin
       .from('orders')
-      .select('id, status, razorpay_payment_id')
+      .select('id, status, fulfillment_status, razorpay_payment_id')
       .eq('id', orderId)
       .eq('razorpay_order_id', razorpayOrderId)
       .maybeSingle()
@@ -87,6 +87,10 @@ export async function POST(request: NextRequest) {
 
     if (order.status === 'paid') {
       if (order.razorpay_payment_id === razorpayPaymentId) {
+        if (order.fulfillment_status === 'cancelled') {
+          return NextResponse.json({ success: true })
+        }
+
         const { error: paymentUpdateError } = await supabaseAdmin
           .from('payments')
           .update({
@@ -96,6 +100,7 @@ export async function POST(request: NextRequest) {
           })
           .eq('order_id', orderId)
           .eq('razorpay_order_id', razorpayOrderId)
+          .neq('status', 'refunded')
 
         if (paymentUpdateError) throw paymentUpdateError
         return NextResponse.json({ success: true })
@@ -157,6 +162,7 @@ export async function POST(request: NextRequest) {
       })
       .eq('order_id', orderId)
       .eq('razorpay_order_id', razorpayOrderId)
+      .neq('status', 'refunded')
 
     if (paymentUpdateError) throw paymentUpdateError
     return NextResponse.json({ success: true })
