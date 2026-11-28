@@ -152,9 +152,9 @@ export default function Footer() {
             <ul className="space-y-2 text-sm">
               {[
                 { href: '/shipping-policy', label: 'Shipping Policy' },
-                { href: '/return-policy', label: 'Returns & Refunds' },
+                { href: '/return-policy', label: 'Return, Refund & Cancellation Policy' },
                 { href: '/privacy-policy', label: 'Privacy Policy' },
-                { href: '/terms', label: 'Terms & Conditions' },
+                { href: '/terms-and-conditions', label: 'Terms & Conditions' },
               ].map((link) => (
                 <li key={link.href}>
                   <Link href={link.href} className="text-green-light hover:text-white transition-colors">
